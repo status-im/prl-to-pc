@@ -2,29 +2,32 @@
 ##
 ## Hermetic fixture-Kit harness for qt-pkgconfig.mk.
 ##
-## Pins the public contract of qt-pkgconfig.mk in Generated mode — the only
-## mode the module supports today, before the Probe is added in a later slice.
+## Pins the public contract of qt-pkgconfig.mk across BOTH modes selected by the
+## Probe (the parse-time libdir string-equality test between the Kit's own
+## Qt6Core.pc and qmake's QT_INSTALL_LIBS).
 ##
 ## Three fixture Kit variants are exercised:
 ##
-##   correct       Kit ships a Committed tree style pkgconfig/ dir whose
+##   correct       Kit ships a Committed-tree-style pkgconfig/ dir whose
 ##                 Qt6Core.pc libdir matches qmake's QT_INSTALL_LIBS answer.
-##                 When the Probe arrives, this Kit selects System mode.
+##                 The Probe passes → System mode.
 ##
 ##   broken-prefix Kit ships a pkgconfig/ dir whose Qt6Core.pc libdir points at
 ##                 a build-farm path (Broken prefix, e.g. /Users/qt/work/install).
-##                 The Probe will fall back to Generated mode for this variant.
+##                 The Probe sees a libdir mismatch → Generated mode.
 ##
 ##   no-pc         Kit ships no pkgconfig/ dir at all (mobile-Kit shape).
-##                 The Probe will fall back to Generated mode.
+##                 The Probe finds no usable Qt6Core.pc → Generated mode.
 ##
-## Under today's module (no Probe) all three variants produce identical
-## observable behaviour: the Wrapper is built and the environment is wired for
-## Generated mode.  The assertions encode that identity so the next slice's
-## Probe introduction is observable as a deliberate assertion update.
+## In System mode the module builds nothing, leaves PATH untouched, exports no
+## prefix-override/arch, uses the system pkg-config, and points QT_PCFILEDIR at
+## the Kit's own pkgconfig dir. In Generated mode it behaves exactly as before:
+## the Wrapper is built, PATH is shadowed, and the prefix-override env is wired.
 ##
-## Requirements: make, nim on PATH (the prl-to-pc repo's dev baseline).
-## No real Qt install required.  Each test run creates a fresh temp sandbox.
+## Requirements: make, nim on PATH, plus a real system pkg-config (the prl-to-pc
+## repo's dev baseline) — the correct/System fixture needs pkg-config to answer
+## the Probe.  No real Qt install required.  Each test run creates a fresh temp
+## sandbox.
 
 import std/[unittest, os, osproc, strutils]
 
@@ -68,7 +71,7 @@ proc seedCommittedTree(modDir: string) =
   writeFile(pcDir / "Qt6Core.pc",
     "prefix=@@QT_PREFIX@@\n" &
     "libdir=${prefix}/lib\n" &
-    "Name: Qt6Core\nVersion: " & FakeVersion & "\n")
+    "Name: Qt6Core\nDescription: Qt6Core\nVersion: " & FakeVersion & "\n")
 
 proc createFakeQmake(sandboxDir, kitPrefix, kitLibs: string): string =
   ## Write a fake qmake shell script that answers -query QT_INSTALL_PREFIX and
@@ -103,6 +106,8 @@ proc writeIncluderMk(sandboxDir, modDir: string): string =
     "\t@echo QT_PC_PKGCONFIG=$(QT_PC_PKGCONFIG)\n" &
     "\t@echo QT_PC_PREFIX=$(QT_PC_PREFIX)\n" &
     "\t@echo PKG_CONFIG_PATH_ENV=$$PKG_CONFIG_PATH\n" &
+    "\t@echo PKG_CONFIG_PREFIX_OVERRIDE_ENV=$$PKG_CONFIG_PREFIX_OVERRIDE\n" &
+    "\t@echo PKG_CONFIG_ARCH_ENV=$$PKG_CONFIG_ARCH\n" &
     "\t@echo PATH_FIRST=$$(echo $$PATH | cut -d: -f1)\n")
   mk
 
@@ -115,6 +120,7 @@ proc runMake(includerMk, qmakePath, target: string): tuple[output: string, code:
 
 proc parseKV(output: string): seq[tuple[k, v: string]] =
   ## Parse "KEY=VALUE" lines from make output (ignoring blank lines).
+  ## The Probe's $(info ...) report line carries no '=' and is skipped.
   for line in output.splitLines:
     let trimmed = line.strip()
     if trimmed.len == 0: continue
@@ -131,14 +137,16 @@ proc valueOf(pairs: seq[tuple[k, v: string]], key: string): string =
 
 proc makeCorrectKit(sandboxDir, kitLibDir: string) =
   ## correct variant: kit ships lib/pkgconfig/Qt6Core.pc with libdir equal to
-  ## QT_INSTALL_LIBS (what the Probe checks for System mode).
+  ## QT_INSTALL_LIBS (what the Probe checks for System mode).  A Description
+  ## field is required or pkg-config(pkgconf) rejects the file and falls through
+  ## to some other Qt6Core on the ambient PKG_CONFIG_PATH.
   let pcDir = kitLibDir / "pkgconfig"
   createDir(pcDir)
   let kitRoot = sandboxDir / "fakekit" / FakeVersion / FakeKit
   writeFile(pcDir / "Qt6Core.pc",
     "prefix=" & kitRoot & "\n" &
     "libdir=" & kitLibDir & "\n" &
-    "Name: Qt6Core\nVersion: " & FakeVersion & "\n")
+    "Name: Qt6Core\nDescription: Qt6Core\nVersion: " & FakeVersion & "\n")
 
 proc makeBrokenPrefixKit(kitLibDir: string) =
   ## broken-prefix variant: kit ships lib/pkgconfig/Qt6Core.pc with a build-farm
@@ -148,18 +156,17 @@ proc makeBrokenPrefixKit(kitLibDir: string) =
   writeFile(pcDir / "Qt6Core.pc",
     "prefix=/Users/qt/work/install\n" &
     "libdir=/Users/qt/work/install/lib\n" &
-    "Name: Qt6Core\nVersion: " & FakeVersion & "\n")
+    "Name: Qt6Core\nDescription: Qt6Core\nVersion: " & FakeVersion & "\n")
 
 proc makeNoPcKit(kitLibDir: string) =
   ## no-pc variant: kit ships no pkgconfig/ dir (mobile-Kit shape).
   createDir(kitLibDir)  # lib/ dir present, but pkgconfig/ absent
 
-# ─── contract verifier ───────────────────────────────────────────────────────
+# ─── contract verifiers ───────────────────────────────────────────────────────
 
 proc checkGeneratedModeContract(sandboxDir, modDir, qmakePath: string) =
-  ## Assert the full Generated mode contract for the current sandbox.
-  ## Called once per fixture variant; all three must satisfy the same contract
-  ## while the module has no Probe.
+  ## Assert the full Generated mode contract for the current sandbox, including
+  ## the Probe's mode report line.
 
   let includerMk = writeIncluderMk(sandboxDir, modDir)
 
@@ -170,6 +177,9 @@ proc checkGeneratedModeContract(sandboxDir, modDir, qmakePath: string) =
   # ── 1. Variable contract (parse-time exports) ────────────────────────────
   let (varsOut, varsCode) = runMake(includerMk, qmakePath, "print-vars")
   doAssert varsCode == 0, "make print-vars failed:\n" & varsOut
+
+  # The Probe reports Generated mode.
+  check varsOut.contains("generated mode")
 
   let kv = parseKV(varsOut)
 
@@ -186,6 +196,9 @@ proc checkGeneratedModeContract(sandboxDir, modDir, qmakePath: string) =
   let pkgCfgPath = valueOf(kv, "PKG_CONFIG_PATH_ENV")
   check pkgCfgPath.startsWith(pcfiledir)
 
+  # The INTERNAL prefix override is exported (Generated mode only).
+  check valueOf(kv, "PKG_CONFIG_PREFIX_OVERRIDE_ENV") == "Qt*=" & kitPrefix
+
   # PATH has the .pcwrap dir prepended (Wrapper is first on PATH).
   check valueOf(kv, "PATH_FIRST") == modDir / ".pcwrap"
 
@@ -195,14 +208,62 @@ proc checkGeneratedModeContract(sandboxDir, modDir, qmakePath: string) =
 
   check fileExists(wrapperPath)
 
+proc checkSystemModeContract(sandboxDir, modDir, qmakePath: string) =
+  ## Assert the full System mode contract for the current sandbox: system
+  ## pkg-config, Kit's own pkgconfig dir, PATH untouched, no prefix-override/arch
+  ## export, and the qt-pkgconfig target a no-op that builds nothing.
+
+  let includerMk = writeIncluderMk(sandboxDir, modDir)
+
+  let wrapperPath  = modDir / ".pcwrap" / "pkg-config"
+  let kitPrefix    = sandboxDir / "fakekit" / FakeVersion / FakeKit
+  let kitPcDir     = kitPrefix / "lib" / "pkgconfig"
+  let wrapDir      = modDir / ".pcwrap"
+
+  # ── 1. Variable contract (parse-time exports) ────────────────────────────
+  let (varsOut, varsCode) = runMake(includerMk, qmakePath, "print-vars")
+  doAssert varsCode == 0, "make print-vars failed:\n" & varsOut
+
+  # The Probe reports System mode.
+  check varsOut.contains("system mode")
+
+  let kv = parseKV(varsOut)
+
+  # QT_PCFILEDIR points at the Kit's OWN pkgconfig dir.
+  check valueOf(kv, "QT_PCFILEDIR") == kitPcDir
+
+  # QT_PC_PKGCONFIG is the system pkg-config (by command name).
+  check valueOf(kv, "QT_PC_PKGCONFIG") == "pkg-config"
+
+  # QT_PC_PREFIX is the Kit prefix returned by fake qmake.
+  check valueOf(kv, "QT_PC_PREFIX") == kitPrefix
+
+  # PKG_CONFIG_PATH has the Kit's own pkgconfig dir prepended.
+  let pkgCfgPath = valueOf(kv, "PKG_CONFIG_PATH_ENV")
+  check pkgCfgPath.startsWith(kitPcDir)
+
+  # No prefix-override / arch is exported in System mode.
+  check valueOf(kv, "PKG_CONFIG_PREFIX_OVERRIDE_ENV") == ""
+  check valueOf(kv, "PKG_CONFIG_ARCH_ENV") == ""
+
+  # PATH is untouched by the module — the Wrapper dir is NOT prepended.
+  check valueOf(kv, "PATH_FIRST") != wrapDir
+
+  # ── 2. qt-pkgconfig target: a no-op that builds nothing ──────────────────
+  let (buildOut, buildCode) = runMake(includerMk, qmakePath, "qt-pkgconfig")
+  doAssert buildCode == 0, "make qt-pkgconfig failed:\n" & buildOut
+
+  # Nothing compiled: the Wrapper must NOT exist.
+  check not fileExists(wrapperPath)
+
 # ─── test cases ──────────────────────────────────────────────────────────────
 
-suite "qt-pkgconfig.mk: generated-mode contract (no Probe)":
+suite "qt-pkgconfig.mk: Probe-selected mode contract":
 
-  test "correct Kit — Generated mode (today identical to broken-prefix and no-pc)":
+  test "correct Kit — Probe selects System mode":
     ## correct Kit ships a pkgconfig/ dir whose Qt6Core.pc libdir matches
-    ## QT_INSTALL_LIBS.  The upcoming Probe will select System mode for this Kit;
-    ## today (no Probe) it still uses Generated mode, same as the others.
+    ## QT_INSTALL_LIBS, so the Probe selects System mode: system pkg-config,
+    ## Kit's own pkgconfig dir, nothing built, PATH untouched.
     let sb = freshSandbox("correct")
     let modDir = stageModule(sb)
     seedCommittedTree(modDir)
@@ -210,12 +271,11 @@ suite "qt-pkgconfig.mk: generated-mode contract (no Probe)":
     let kitLibs   = kitPrefix / "lib"
     let qmake = createFakeQmake(sb, kitPrefix, kitLibs)
     makeCorrectKit(sb, kitLibs)
-    checkGeneratedModeContract(sb, modDir, qmake)
+    checkSystemModeContract(sb, modDir, qmake)
 
-  test "broken-prefix Kit — Generated mode":
-    ## broken-prefix Kit ships a pkgconfig/ dir with Broken prefix paths.
-    ## The Probe (next slice) will detect the mismatch and fall back to
-    ## Generated mode; today (no Probe) the module always uses Generated mode.
+  test "broken-prefix Kit — Probe falls back to Generated mode":
+    ## broken-prefix Kit ships a pkgconfig/ dir with Broken prefix paths, so the
+    ## Probe sees a libdir mismatch and falls back to Generated mode.
     let sb = freshSandbox("broken")
     let modDir = stageModule(sb)
     seedCommittedTree(modDir)
@@ -225,10 +285,9 @@ suite "qt-pkgconfig.mk: generated-mode contract (no Probe)":
     makeBrokenPrefixKit(kitLibs)
     checkGeneratedModeContract(sb, modDir, qmake)
 
-  test "no-pc Kit — Generated mode":
-    ## no-pc Kit ships no pkgconfig/ dir at all (mobile-Kit shape).
-    ## The Probe (next slice) will not find Qt6Core.pc and will use Generated
-    ## mode; today (no Probe) the module always uses Generated mode.
+  test "no-pc Kit — Probe falls back to Generated mode":
+    ## no-pc Kit ships no pkgconfig/ dir at all (mobile-Kit shape), so the Probe
+    ## finds no usable Qt6Core.pc and falls back to Generated mode.
     let sb = freshSandbox("nopc")
     let modDir = stageModule(sb)
     seedCommittedTree(modDir)
