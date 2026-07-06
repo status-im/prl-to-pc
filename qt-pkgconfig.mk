@@ -108,19 +108,30 @@ endif
 # when QMAKE points elsewhere.
 QT_PC_LIBS         := $(shell $(QMAKE) -query QT_INSTALL_LIBS)
 QT_PC_KIT_PCDIR    := $(QT_PC_LIBS)/pkgconfig
+# Parse-time wildcard: does the Kit ship any Qt6Core .pc in its own pkgconfig dir?
+# Covers both the bare name (desktop) and the android arch-suffixed name (e.g.
+# Qt6Core_arm64-v8a.pc).  Used below to distinguish "kit ships no .pc" from a
+# "Broken prefix" kit that does ship one but with a build-farm libdir.
+QT_PC_KIT_HAS_PC   := $(wildcard $(QT_PC_KIT_PCDIR)/Qt6Core.pc $(QT_PC_KIT_PCDIR)/Qt6Core_*.pc)
 QT_PC_PROBE_LIBDIR := $(shell PKG_CONFIG_PATH=$(QT_PC_KIT_PCDIR)$(QT_PC_PATHSEP)$(PKG_CONFIG_PATH) pkg-config --variable=libdir Qt6Core 2>/dev/null)
 
 ifeq ($(strip $(QT_PC_PROBE_LIBDIR)),)
- # Empty output: no pkgconfig dir, no pkg-config on PATH, or no Qt6Core.
+ # Empty output: no pkg-config on PATH, or kit ships no Qt6Core.pc and no ambient one.
  QT_PC_MODE   := generated
- QT_PC_REASON := generated mode: kit ships no usable Qt6Core.pc (no pkgconfig dir or pkg-config/Qt6Core not found)
+ QT_PC_REASON := generated mode: kit ships no Qt6Core.pc in $(QT_PC_KIT_PCDIR)
 else ifeq ($(QT_PC_PROBE_LIBDIR),$(QT_PC_LIBS))
  QT_PC_MODE   := system
  QT_PC_REASON := system mode: Qt6Core.pc libdir matches qmake QT_INSTALL_LIBS
 else
- # Qt6Core.pc found but its libdir points elsewhere — Broken prefix / wrong Kit.
+ # Qt6Core.pc found but its libdir points elsewhere.  Use the parse-time wildcard
+ # to distinguish a Kit that ships NO own .pc (mobile/embedded — the probe found
+ # an ambient one, e.g. brew Qt) from a Kit that ships one with a Broken prefix.
  QT_PC_MODE   := generated
- QT_PC_REASON := generated mode: Qt6Core.pc libdir mismatch (broken prefix)
+ ifeq ($(strip $(QT_PC_KIT_HAS_PC)),)
+  QT_PC_REASON := generated mode: kit ships no Qt6Core.pc in $(QT_PC_KIT_PCDIR)
+ else
+  QT_PC_REASON := generated mode: Qt6Core.pc libdir mismatch (broken prefix)
+ endif
 endif
 
 $(info qt-pkgconfig.mk: $(QT_PC_REASON))

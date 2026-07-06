@@ -164,9 +164,12 @@ proc makeNoPcKit(kitLibDir: string) =
 
 # ─── contract verifiers ───────────────────────────────────────────────────────
 
-proc checkGeneratedModeContract(sandboxDir, modDir, qmakePath: string) =
+proc checkGeneratedModeContract(sandboxDir, modDir, qmakePath: string,
+                                specificReason: string = "") =
   ## Assert the full Generated mode contract for the current sandbox, including
-  ## the Probe's mode report line.
+  ## the Probe's mode report line.  When specificReason is non-empty it is also
+  ## checked (in addition to the broad "generated mode" substring) so callers
+  ## can pin the exact diagnostic message for no-pc vs broken-prefix kits.
 
   let includerMk = writeIncluderMk(sandboxDir, modDir)
 
@@ -180,6 +183,8 @@ proc checkGeneratedModeContract(sandboxDir, modDir, qmakePath: string) =
 
   # The Probe reports Generated mode.
   check varsOut.contains("generated mode")
+  if specificReason.len > 0:
+    check varsOut.contains(specificReason)
 
   let kv = parseKV(varsOut)
 
@@ -275,7 +280,8 @@ suite "qt-pkgconfig.mk: Probe-selected mode contract":
 
   test "broken-prefix Kit — Probe falls back to Generated mode":
     ## broken-prefix Kit ships a pkgconfig/ dir with Broken prefix paths, so the
-    ## Probe sees a libdir mismatch and falls back to Generated mode.
+    ## Probe sees a libdir mismatch and falls back to Generated mode.  The reason
+    ## must say "libdir mismatch (broken prefix)", not "ships no Qt6Core.pc".
     let sb = freshSandbox("broken")
     let modDir = stageModule(sb)
     seedCommittedTree(modDir)
@@ -283,11 +289,14 @@ suite "qt-pkgconfig.mk: Probe-selected mode contract":
     let kitLibs   = kitPrefix / "lib"
     let qmake = createFakeQmake(sb, kitPrefix, kitLibs)
     makeBrokenPrefixKit(kitLibs)
-    checkGeneratedModeContract(sb, modDir, qmake)
+    checkGeneratedModeContract(sb, modDir, qmake, "libdir mismatch (broken prefix)")
 
   test "no-pc Kit — Probe falls back to Generated mode":
     ## no-pc Kit ships no pkgconfig/ dir at all (mobile-Kit shape), so the Probe
-    ## finds no usable Qt6Core.pc and falls back to Generated mode.
+    ## finds no usable Qt6Core.pc and falls back to Generated mode.  The reason
+    ## must say "kit ships no Qt6Core.pc in <kitpcdir>" (deterministic wildcard
+    ## check), not "libdir mismatch" — even on machines where brew pkg-config
+    ## would otherwise resolve an ambient Qt6Core.pc and make the probe non-empty.
     let sb = freshSandbox("nopc")
     let modDir = stageModule(sb)
     seedCommittedTree(modDir)
@@ -295,4 +304,4 @@ suite "qt-pkgconfig.mk: Probe-selected mode contract":
     let kitLibs   = kitPrefix / "lib"
     let qmake = createFakeQmake(sb, kitPrefix, kitLibs)
     makeNoPcKit(kitLibs)
-    checkGeneratedModeContract(sb, modDir, qmake)
+    checkGeneratedModeContract(sb, modDir, qmake, "kit ships no Qt6Core.pc")
