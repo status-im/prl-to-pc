@@ -113,12 +113,16 @@ QT_PC_KIT_PCDIR    := $(QT_PC_LIBS)/pkgconfig
 # Qt6Core_arm64-v8a.pc).  Used below to distinguish "kit ships no .pc" from a
 # "Broken prefix" kit that does ship one but with a build-farm libdir.
 QT_PC_KIT_HAS_PC   := $(wildcard $(QT_PC_KIT_PCDIR)/Qt6Core.pc $(QT_PC_KIT_PCDIR)/Qt6Core_*.pc)
-QT_PC_PROBE_LIBDIR := $(shell PKG_CONFIG_PATH=$(QT_PC_KIT_PCDIR)$(QT_PC_PATHSEP)$(PKG_CONFIG_PATH) pkg-config --variable=libdir Qt6Core 2>/dev/null)
+QT_PC_PROBE_LIBDIR := $(shell PKG_CONFIG_PATH="$(QT_PC_KIT_PCDIR)$(QT_PC_PATHSEP)$(PKG_CONFIG_PATH)" pkg-config --variable=libdir Qt6Core 2>/dev/null)
 
 ifeq ($(strip $(QT_PC_PROBE_LIBDIR)),)
- # Empty output: no pkg-config on PATH, or kit ships no Qt6Core.pc and no ambient one.
+ # Empty output: pkg-config missing/unusable, OR kit ships no Qt6Core.pc and no ambient one.
  QT_PC_MODE   := generated
- QT_PC_REASON := generated mode: kit ships no Qt6Core.pc in $(QT_PC_KIT_PCDIR)
+ ifeq ($(strip $(QT_PC_KIT_HAS_PC)),)
+  QT_PC_REASON := generated mode: kit ships no Qt6Core.pc in $(QT_PC_KIT_PCDIR)
+ else
+  QT_PC_REASON := generated mode: kit ships Qt6Core.pc but probe got no answer (pkg-config missing or unusable)
+ endif
 else ifeq ($(QT_PC_PROBE_LIBDIR),$(QT_PC_LIBS))
  QT_PC_MODE   := system
  QT_PC_REASON := system mode: Qt6Core.pc libdir matches qmake QT_INSTALL_LIBS
