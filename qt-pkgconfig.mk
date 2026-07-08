@@ -131,8 +131,8 @@ qt-pkgconfig-tools: $(QT_PC_WRAPPER) $(QT_PC_GENERATOR)
 .PHONY: qt-pkgconfig-generate
 ifneq (,$(QT_PC_STORE_COPY))
 qt-pkgconfig-generate:
-	@echo "qt-pkgconfig.mk ERROR: no committed Qt .pc tree for kit '$(QT_PC_KIT)' ($(QT_PCFILEDIR))," >&2; \
-	 echo "and this prl-to-pc copy is a read-only nimble store copy — refusing to generate into it." >&2; \
+	@echo "qt-pkgconfig.mk ERROR: this prl-to-pc copy is a read-only nimble store copy —" >&2; \
+	 echo "refusing to generate a Qt .pc tree into it (kit '$(QT_PC_KIT)', $(QT_PCFILEDIR))." >&2; \
 	 echo "Develop prl-to-pc (in status-desktop: 'nim develop status.nims prl-to-pc'), run" >&2; \
 	 echo "'make qt-pkgconfig-generate' against the checkout, and commit the new tree upstream." >&2; \
 	 exit 1
