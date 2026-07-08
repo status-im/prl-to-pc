@@ -79,10 +79,18 @@ QT_PC_PKGCONFIG := $(QT_PC_WRAPPER)
 
 # The generator imports `regex`; auto-detect status-desktop's vendored copies
 # (siblings of this submodule) so plain `nim c` builds it offline. When they are
-# absent (standalone clone), nimble's own dependency resolution is expected.
+# absent, fall back to the consumer repo's nimble-resolved store paths
+# (nimble.paths two levels up, i.e. next to a vendor/ that holds this repo):
+# nim DISABLES its default ~/.nimble/pkgs2 search when the compile's cwd
+# contains a nimble.lock, so bare `import regex` resolution cannot be relied
+# on there — the paths must be explicit. A standalone clone with neither
+# still resolves via nim's default nimblepath (`nimble install regex`).
 QT_PC_REGEX_SRC := $(QT_PC_SELF_DIR)/../nim-regex/src
+QT_PC_CONSUMER_PATHS := $(QT_PC_SELF_DIR)/../../nimble.paths
 ifneq (,$(wildcard $(QT_PC_REGEX_SRC)))
  QT_PC_GEN_PATHS := --path:$(QT_PC_REGEX_SRC) --path:$(QT_PC_SELF_DIR)/../nim-unicodedb/src
+else ifneq (,$(wildcard $(QT_PC_CONSUMER_PATHS)))
+ QT_PC_GEN_PATHS := $(shell awk -F'"' '/pkgs2\/(regex|unicodedb)-/{print "--path:" $$2}' $(QT_PC_CONSUMER_PATHS))
 else
  QT_PC_GEN_PATHS :=
 endif
