@@ -1,5 +1,5 @@
 # Package
-version       = "0.1.0"
+version       = "0.2.0"
 author        = "AlexJb"
 description   = "Convert Qt .prl files to pkg-config .pc files"
 license       = "MIT"
