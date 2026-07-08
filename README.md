@@ -57,17 +57,29 @@ include path/to/prl-to-pc/qt-pkgconfig.mk
 
 The **only input is `QMAKE`** (defaults to `qmake` on `PATH`) — the kit,
 version, platform and android ABI are all derived from
-`qmake -query QT_INSTALL_PREFIX`. The include:
+`qmake -query QT_INSTALL_PREFIX`.
 
-- builds the wrapper (and, only when needed, the generator) into
-  `QT_PC_BUILD_DIR`;
-- selects this kit's committed `.pc` tree, or schedules generation when the
-  kit has none;
-- exports the wrapper env (`PKG_CONFIG_PATH`, `PKG_CONFIG_PREFIX_OVERRIDE`,
+The include picks one of two modes automatically at make parse time
+(re-decided on every invocation, so switching kits needs no cleaning). The
+probe: with the kit's own `pkgconfig` dir prepended to `PKG_CONFIG_PATH`,
+`pkg-config --variable=libdir Qt6Core` must string-equal
+`qmake -query QT_INSTALL_LIBS` exactly. A one-line `$(info …)` reports the
+chosen mode and reason.
+
+- **System mode** (probe passes): the kit already ships usable `.pc`
+  metadata — its `pkgconfig` dir is prepended to `PKG_CONFIG_PATH` and the
+  system `pkg-config` is used as-is. Nothing is built, `PATH` and the
+  override env are untouched, and all three targets are no-ops.
+- **Generated mode** (any probe failure — no pkg-config, no `Qt6Core.pc`,
+  or a broken prefix whose libdir differs): the behavior described in the
+  rest of this README — the wrapper (and, only when needed, the generator)
+  is built into `QT_PC_BUILD_DIR`, this kit's committed `.pc` tree is
+  selected (or generation scheduled when the kit has none), and the wrapper
+  env is exported (`PKG_CONFIG_PATH`, `PKG_CONFIG_PREFIX_OVERRIDE`,
   `PKG_CONFIG_ARCH` on android, wrapper dir prepended to `PATH`) so recipes
   and Nim-compile-time `gorge("pkg-config …")` calls just work.
 
-Targets:
+Targets (all no-ops in System mode):
 
 | target | purpose |
 |---|---|
@@ -75,11 +87,13 @@ Targets:
 | `qt-pkgconfig-tools` | build wrapper + generator executables. |
 | `qt-pkgconfig-generate` | (re)generate this kit's `.pc` tree from the `QMAKE` kit — run on a Qt version bump and **commit the result**. |
 
-Variables the includer may read: `QT_PCFILEDIR` (committed `.pc` dir for the
-active kit), `QT_PC_PKGCONFIG` (wrapper path), `QT_PC_GENERATOR`,
-`QT_PC_PREFIX` (real kit prefix).
+Variables the includer may read: `QT_PCFILEDIR` (the active kit's `.pc` dir
+— the kit's own in System mode, the committed tree in Generated mode),
+`QT_PC_PKGCONFIG` (the pkg-config to invoke — system tool vs built wrapper),
+`QT_PC_GENERATOR` (Generated mode only), `QT_PC_PREFIX` (real kit prefix).
 
-Consumer-overridable knobs (set **before** the `include`):
+Consumer-overridable knobs, Generated mode only (set **before** the
+`include`):
 
 - `QT_PC_BUILD_DIR` (default `<this repo>/.pcwrap`) — where the wrapper and
   generator binaries are built. **Must be overridden to a consumer-local dir
@@ -185,8 +199,10 @@ generateBundled("~/Qt/6.11.0/macos/lib", "out/root")
 nimble test
 ```
 
-Runs the wrapper's unit tests (glob/override/arch-suffix logic) plus a
-minimal-project compile check that each committed `.pc` tree resolves
+Runs the wrapper's unit tests (glob/override/arch-suffix logic), a hermetic
+fixture-kit harness for `qt-pkgconfig.mk` (System/Generated mode selection,
+probe reasons), and a minimal-project compile check that each committed
+`.pc` tree resolves
 correct include paths: it queries cflags through the wrapper and compiles a
 tiny Qt translation unit per kit. Kits whose real Qt install or platform
 compiler is absent are **skipped**, so the suite runs on any one machine

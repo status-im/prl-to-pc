@@ -31,11 +31,13 @@ requires "https://github.com/nitely/nim-unicodedb.git#8938e71cdb3332b8a16eb27a69
 task build, "Build the unified pkg-config wrapper (pkg-config[.exe])":
   exec "nim c -d:release --hints:off --skipParentCfg:on -o:pkg-config src/pkgconfig_wrapper.nim"
 
-# Unit-tests the wrapper logic, plus a minimal-project compile check that the
-# committed .pc resolve correct Qt include paths per platform (kits/compilers
-# that are absent are skipped, so this is runnable on any one machine / CI leg).
+# Unit-tests the wrapper logic, the qt-pkgconfig.mk conversion harness, plus a
+# minimal-project compile check that the committed .pc resolve correct Qt include
+# paths per platform (kits/compilers that are absent are skipped, so this is
+# runnable on any one machine / CI leg).
 task test, "Run prl-to-pc tests":
   exec "nim c -r --hints:off --skipParentCfg:on --path:src tests/test_pkgconfig_wrapper.nim"
+  exec "nim c -r --hints:off --skipParentCfg:on --path:src tests/test_qt_pkgconfig_mk.nim"
   exec "nim c -r --hints:off --skipParentCfg:on --path:src tests/test_committed_pc_compile.nim"
 
 # Tasks

@@ -2,28 +2,59 @@
 # build. Just `include` it; there is nothing to configure. The only requirements
 # are `qmake` and `nim` (or `nimble`) on PATH.
 #
-# It derives everything from qmake and:
-#   1. builds the pkg-config wrapper + the prl_to_pc generator into QT_PC_BUILD_DIR
-#      (default <this-dir>/.pcwrap/; consumers of a read-only store copy override it);
-#   2. ships, and auto-generates when missing, the committed relocatable Qt .pc tree
-#      for the active kit under <this-dir>/<version>/<kit>/lib/pkgconfig;
-#   3. exports the env seaqt's gorge("pkg-config ...") needs at nim-compile time
-#      (PKG_CONFIG_PATH + the wrapper on PATH, plus an INTERNAL prefix override so the
-#      relocatable @@QT_PREFIX@@ placeholder resolves to the real kit).
+# It picks one of two modes automatically, at make PARSE time, and re-decides on
+# every invocation — so switching Kits via QMAKE needs no cleaning:
 #
-# To target a specific kit, set the standard QMAKE variable (defaults to `qmake` on
-# PATH) — that is the ONLY input, and the desktop/mobile Makefiles already set it.
+#   System mode     The active Kit already ships usable pkg-config metadata. Its
+#                   own `pkgconfig` dir is prepended to PKG_CONFIG_PATH and the
+#                   system `pkg-config` is used as-is. Nothing is built, PATH is
+#                   left untouched, no prefix-override env is exported, and
+#                   `qt-pkgconfig` (plus the tools/generate targets) are no-ops.
 #
-# Outputs the includer may use:
-#   QT_PCFILEDIR     committed .pc dir for the active kit
-#   QT_PC_PKGCONFIG  path to the built pkg-config wrapper (= QT_PC_WRAPPER)
-#   QT_PC_GENERATOR  path to the built prl_to_pc generator
+#   Generated mode  The fallback for Kits whose .pc are missing or carry a Broken
+#                   prefix. It:
+#                     1. builds the pkg-config Wrapper + the prl_to_pc generator
+#                        into QT_PC_BUILD_DIR (default <this-dir>/.pcwrap/;
+#                        consumers of a read-only store copy override it);
+#                     2. ships, and auto-generates when missing, the committed
+#                        relocatable Qt .pc tree for the active Kit under
+#                        <this-dir>/<version>/<kit>/lib/pkgconfig;
+#                     3. exports the env seaqt's gorge("pkg-config ...") needs at
+#                        nim-compile time (PKG_CONFIG_PATH + the Wrapper on PATH,
+#                        plus an INTERNAL prefix override so the relocatable
+#                        @@QT_PREFIX@@ placeholder resolves to the real Kit).
+#
+# The Probe is the sole authority for the choice (no override knob, no version
+# tables): with the Kit's `pkgconfig` dir (= `qmake -query QT_INSTALL_LIBS`/
+# pkgconfig) prepended to PKG_CONFIG_PATH, `pkg-config --variable=libdir Qt6Core`
+# must string-equal `qmake -query QT_INSTALL_LIBS` exactly. Pass → System mode;
+# any failure (no pkg-config on PATH, no Qt6Core, or a Broken prefix whose libdir
+# differs) → Generated mode. Only Qt6Core is probed — deliberately simple; a
+# missing module in an otherwise-correct Kit surfaces later as a normal pkg-config
+# error at nim-compile time. A one-line $(info ...) reports the chosen mode and
+# reason in both modes.
+#
+# To target a specific Kit, set the standard QMAKE variable (defaults to `qmake`
+# on PATH) — that is the ONLY input, and the desktop/mobile Makefiles already set
+# it.
+#
+# Outputs the includer may use (identical in shape across both modes):
+#   QT_PCFILEDIR     dir holding this Kit's .pc files —
+#                      System mode:    the Kit's own `pkgconfig` dir
+#                      Generated mode: the committed .pc tree for the Kit
+#   QT_PC_PKGCONFIG  the pkg-config to invoke —
+#                      System mode:    `pkg-config` (the system tool, by command
+#                                      name, resolved off PATH at use time)
+#                      Generated mode: the built Wrapper (= QT_PC_WRAPPER)
 #   QT_PC_PREFIX     the real Qt install prefix (from qmake)
-# Targets:
-#   qt-pkgconfig           (aggregate) wrapper built + this kit's .pc present —
-#                          add as an order-only prerequisite of your nim build.
-#   qt-pkgconfig-tools     build both executables.
-#   qt-pkgconfig-generate  force (re)generate this kit's .pc tree (Qt bump); commit it.
+#   QT_PC_GENERATOR  path to the built prl_to_pc generator (Generated mode only)
+# Targets (valid in both modes; no-ops in System mode):
+#   qt-pkgconfig           (aggregate) ready-to-build — add as an order-only
+#                          prerequisite of your nim build. System mode: no-op.
+#                          Generated mode: Wrapper built + this Kit's .pc present.
+#   qt-pkgconfig-tools     build both executables (Generated mode only).
+#   qt-pkgconfig-generate  force (re)generate this Kit's .pc tree (Qt bump); commit
+#                          it (Generated mode only).
 
 ifndef QT_PKGCONFIG_MK_INCLUDED
 QT_PKGCONFIG_MK_INCLUDED := 1
@@ -66,6 +97,72 @@ else ifeq ($(QT_PC_KIT),android_x86)
 else
  QT_PC_ARCH :=
 endif
+
+# --- the Probe: choose System vs Generated mode at parse time ----------------
+# Derive the Kit's own pkgconfig dir from qmake, then ask the system pkg-config
+# for Qt6Core's libdir with that dir prepended to PKG_CONFIG_PATH. The env prefix
+# lives INSIDE the $(shell) invocation, scoped to the probe command only — it is
+# never leaked into the real exports below. stderr is redirected so pkg-config
+# warnings/errors never reach the terminal. The libdir must string-equal qmake's
+# QT_INSTALL_LIBS exactly: comparing the value (not merely `--exists`) is what
+# rejects a wrong Kit — e.g. a distro Qt in /usr would satisfy `--exists` even
+# when QMAKE points elsewhere.
+QT_PC_LIBS         := $(shell $(QMAKE) -query QT_INSTALL_LIBS)
+QT_PC_KIT_PCDIR    := $(QT_PC_LIBS)/pkgconfig
+# Parse-time wildcard: does the Kit ship any Qt6Core .pc in its own pkgconfig dir?
+# Covers both the bare name (desktop) and the android arch-suffixed name (e.g.
+# Qt6Core_arm64-v8a.pc).  Used below to distinguish "kit ships no .pc" from a
+# "Broken prefix" kit that does ship one but with a build-farm libdir.
+QT_PC_KIT_HAS_PC   := $(wildcard $(QT_PC_KIT_PCDIR)/Qt6Core.pc $(QT_PC_KIT_PCDIR)/Qt6Core_*.pc)
+QT_PC_PROBE_LIBDIR := $(shell PKG_CONFIG_PATH="$(QT_PC_KIT_PCDIR)$(QT_PC_PATHSEP)$(PKG_CONFIG_PATH)" pkg-config --variable=libdir Qt6Core 2>/dev/null)
+
+ifeq ($(strip $(QT_PC_PROBE_LIBDIR)),)
+ # Empty output: pkg-config missing/unusable, OR kit ships no Qt6Core.pc and no ambient one.
+ QT_PC_MODE   := generated
+ ifeq ($(strip $(QT_PC_KIT_HAS_PC)),)
+  QT_PC_REASON := generated mode: kit ships no Qt6Core.pc in $(QT_PC_KIT_PCDIR)
+ else
+  QT_PC_REASON := generated mode: kit ships Qt6Core.pc but probe got no answer (pkg-config missing or unusable)
+ endif
+else ifeq ($(QT_PC_PROBE_LIBDIR),$(QT_PC_LIBS))
+ QT_PC_MODE   := system
+ QT_PC_REASON := system mode: Qt6Core.pc libdir matches qmake QT_INSTALL_LIBS
+else
+ # Qt6Core.pc found but its libdir points elsewhere.  Use the parse-time wildcard
+ # to distinguish a Kit that ships NO own .pc (mobile/embedded — the probe found
+ # an ambient one, e.g. brew Qt) from a Kit that ships one with a Broken prefix.
+ QT_PC_MODE   := generated
+ ifeq ($(strip $(QT_PC_KIT_HAS_PC)),)
+  QT_PC_REASON := generated mode: kit ships no Qt6Core.pc in $(QT_PC_KIT_PCDIR)
+ else
+  QT_PC_REASON := generated mode: Qt6Core.pc libdir mismatch (broken prefix)
+ endif
+endif
+
+$(info qt-pkgconfig.mk: $(QT_PC_REASON))
+
+ifeq ($(QT_PC_MODE),system)
+# ===== System mode ==========================================================
+# Trust the Kit's own .pc plus the system pkg-config. Build nothing, touch no
+# PATH, export no prefix override / arch.
+QT_PCFILEDIR    := $(QT_PC_KIT_PCDIR)
+QT_PC_PKGCONFIG := pkg-config
+
+.PHONY: qt-pkgconfig qt-pkgconfig-tools qt-pkgconfig-generate
+qt-pkgconfig qt-pkgconfig-tools qt-pkgconfig-generate:
+	@:
+
+# Prepend the Kit's pkgconfig dir to PKG_CONFIG_PATH; PATH stays untouched.
+ifeq ($(strip $(PKG_CONFIG_PATH)),)
+ export PKG_CONFIG_PATH := $(QT_PCFILEDIR)
+else
+ export PKG_CONFIG_PATH := $(QT_PCFILEDIR)$(QT_PC_PATHSEP)$(PKG_CONFIG_PATH)
+endif
+
+else
+# ===== Generated mode =======================================================
+# Bit-for-bit the original behaviour: Wrapper build, committed-tree lookup,
+# auto-generation, Android ABI suffix, PATH prepend, prefix-override export.
 
 QT_PCFILEDIR := $(QT_PC_SELF_DIR)/$(QT_PC_VER)/$(QT_PC_KIT)/lib/pkgconfig
 # Is this kit's committed .pc tree already present? Decided at PARSE time (matches both
@@ -164,5 +261,7 @@ else
  export PKG_CONFIG_PATH := $(QT_PCFILEDIR)$(QT_PC_PATHSEP)$(PKG_CONFIG_PATH)
 endif
 export PATH := $(QT_PC_BUILD_DIR):$(PATH)
+
+endif # QT_PC_MODE
 
 endif # QT_PKGCONFIG_MK_INCLUDED
