@@ -3,7 +3,8 @@
 # are `qmake` and `nim` (or `nimble`) on PATH.
 #
 # It derives everything from qmake and:
-#   1. builds the pkg-config wrapper + the prl_to_pc generator into <this-dir>/.pcwrap/;
+#   1. builds the pkg-config wrapper + the prl_to_pc generator into QT_PC_BUILD_DIR
+#      (default <this-dir>/.pcwrap/; consumers of a read-only store copy override it);
 #   2. ships, and auto-generates when missing, the committed relocatable Qt .pc tree
 #      for the active kit under <this-dir>/<version>/<kit>/lib/pkgconfig;
 #   3. exports the env seaqt's gorge("pkg-config ...") needs at nim-compile time
@@ -72,21 +73,33 @@ QT_PCFILEDIR := $(QT_PC_SELF_DIR)/$(QT_PC_VER)/$(QT_PC_KIT)/lib/pkgconfig
 # only pulled in when generation is actually needed — never on a normal build.
 QT_PC_HAVE_PC := $(wildcard $(QT_PCFILEDIR)/Qt6Core.pc $(QT_PCFILEDIR)/Qt6Core_*.pc)
 
-QT_PC_BUILD_DIR := $(QT_PC_SELF_DIR)/.pcwrap
+# Where the wrapper + generator executables are built. Consumer-overridable
+# (set QT_PC_BUILD_DIR before including this file): when this repo is consumed
+# as a READ-ONLY nimble store copy, in-package writes are forbidden — the
+# consumer points the build at its own scratch dir instead. A plain checkout
+# keeps the historical in-repo default.
+QT_PC_BUILD_DIR ?= $(QT_PC_SELF_DIR)/.pcwrap
 QT_PC_WRAPPER   := $(QT_PC_BUILD_DIR)/pkg-config$(QT_PC_EXE)
 QT_PC_GENERATOR := $(QT_PC_BUILD_DIR)/prl_to_pc$(QT_PC_EXE)
 QT_PC_PKGCONFIG := $(QT_PC_WRAPPER)
 
+# A nimble store copy carries nimblemeta.json at the package root (a git
+# checkout never does). Store copies are read-only pinned content: the
+# generate path below must never write .pc trees into them.
+QT_PC_STORE_COPY := $(wildcard $(QT_PC_SELF_DIR)/nimblemeta.json)
+
 # The generator imports `regex`; auto-detect status-desktop's vendored copies
 # (siblings of this submodule) so plain `nim c` builds it offline. When they are
 # absent, fall back to the consumer repo's nimble-resolved store paths
-# (nimble.paths two levels up, i.e. next to a vendor/ that holds this repo):
+# (QT_PC_CONSUMER_PATHS, consumer-overridable; defaults to a nimble.paths two
+# levels up, i.e. next to a vendor/ that holds this repo — a store copy's
+# consumer must set it to its own nimble.paths explicitly):
 # nim DISABLES its default ~/.nimble/pkgs2 search when the compile's cwd
 # contains a nimble.lock, so bare `import regex` resolution cannot be relied
 # on there — the paths must be explicit. A standalone clone with neither
 # still resolves via nim's default nimblepath (`nimble install regex`).
 QT_PC_REGEX_SRC := $(QT_PC_SELF_DIR)/../nim-regex/src
-QT_PC_CONSUMER_PATHS := $(QT_PC_SELF_DIR)/../../nimble.paths
+QT_PC_CONSUMER_PATHS ?= $(QT_PC_SELF_DIR)/../../nimble.paths
 ifneq (,$(wildcard $(QT_PC_REGEX_SRC)))
  QT_PC_GEN_PATHS := --path:$(QT_PC_REGEX_SRC) --path:$(QT_PC_SELF_DIR)/../nim-unicodedb/src
 else ifneq (,$(wildcard $(QT_PC_CONSUMER_PATHS)))
@@ -112,10 +125,22 @@ qt-pkgconfig-tools: $(QT_PC_WRAPPER) $(QT_PC_GENERATOR)
 # Used manually on a Qt version bump (commit the result) and as the auto path below
 # when the tree is missing. Because the generator is built only in this target, a
 # normal build (tree present) never compiles it.
+# The .pc tree is COMMITTED CONTENT of this repo: when this file runs from a
+# read-only nimble store copy, generation must refuse instead of scribbling on
+# pinned content — new kits are added from a real checkout and committed.
 .PHONY: qt-pkgconfig-generate
+ifneq (,$(QT_PC_STORE_COPY))
+qt-pkgconfig-generate:
+	@echo "qt-pkgconfig.mk ERROR: no committed Qt .pc tree for kit '$(QT_PC_KIT)' ($(QT_PCFILEDIR))," >&2; \
+	 echo "and this prl-to-pc copy is a read-only nimble store copy — refusing to generate into it." >&2; \
+	 echo "Develop prl-to-pc (in status-desktop: 'nim develop status.nims prl-to-pc'), run" >&2; \
+	 echo "'make qt-pkgconfig-generate' against the checkout, and commit the new tree upstream." >&2; \
+	 exit 1
+else
 qt-pkgconfig-generate: $(QT_PC_GENERATOR)
 	@echo "[prl-to-pc] generating Qt .pc for '$(QT_PC_KIT)' from $(QT_PC_PREFIX)"
 	"$(QT_PC_GENERATOR)" generate "$$($(QMAKE) -query QT_INSTALL_LIBS)" "$(QT_PC_SELF_DIR)"
+endif
 
 # Aggregate prerequisite for the nim build: ensure the wrapper, plus this kit's .pc.
 # The .pc dependency is added ONLY when the committed tree is absent (decided at parse
