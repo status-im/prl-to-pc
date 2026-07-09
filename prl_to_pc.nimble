@@ -1,14 +1,28 @@
 # Package
-version       = "0.1.0"
+version       = "0.2.0"
 author        = "AlexJb"
 description   = "Convert Qt .prl files to pkg-config .pc files"
 license       = "MIT"
-srcDir        = "src"
-bin           = @["prl_to_pc"]
+# SOURCE-ONLY manifest, full-tree store copies — both load-bearing for
+# consumers that pin this repo as a nimble dependency (status-desktop):
+#  - no `bin`: nimble 0.22.x builds dependency binaries UNCONDITIONALLY
+#    during every consumer's `nimble setup` (there is no skip mechanism).
+#    The tools are built on demand by qt-pkgconfig.mk instead.
+#  - no `srcDir`: nimble hoists a srcDir package's store copy (srcDir
+#    contents moved to the entry root, EVERYTHING else dropped) — which
+#    would strip qt-pkgconfig.mk and the committed Qt .pc trees, the whole
+#    point of consuming this package. Without srcDir the full repo tree is
+#    materialized (sources stay importable under src/; nothing imports
+#    them as modules anyway).
 
-# Dependencies
+# Dependencies. The generator dep is pinned by revision: name-form requires
+# in dependency manifests make consumer solves nondeterministic (candidate
+# tables drift across machines/days), and unpinned ranges enumerate every
+# candidate version. unicodedb (regex's own dep) is pinned too so its range
+# never enumerates. Keep in sync with status-desktop's pins.
 requires "nim >= 1.6.0"
-requires "regex"
+requires "https://github.com/nitely/nim-regex.git#2c41f0b2fee9fe78cf22f029bc854a77ac2e9768"  # regex
+requires "https://github.com/nitely/nim-unicodedb.git#8938e71cdb3332b8a16eb27a6984c8565ea4643e"  # unicodedb
 
 # Build the unified pkg-config wrapper -> `pkg-config` (`pkg-config.exe` on
 # Windows), so it can shadow the real tool on PATH. The wrapper is dependency-free

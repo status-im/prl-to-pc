@@ -14,7 +14,8 @@
 #   Generated mode  The fallback for Kits whose .pc are missing or carry a Broken
 #                   prefix. It:
 #                     1. builds the pkg-config Wrapper + the prl_to_pc generator
-#                        into <this-dir>/.pcwrap/;
+#                        into QT_PC_BUILD_DIR (default <this-dir>/.pcwrap/;
+#                        consumers of a read-only store copy override it);
 #                     2. ships, and auto-generates when missing, the committed
 #                        relocatable Qt .pc tree for the active Kit under
 #                        <this-dir>/<version>/<kit>/lib/pkgconfig;
@@ -169,29 +170,60 @@ QT_PCFILEDIR := $(QT_PC_SELF_DIR)/$(QT_PC_VER)/$(QT_PC_KIT)/lib/pkgconfig
 # only pulled in when generation is actually needed — never on a normal build.
 QT_PC_HAVE_PC := $(wildcard $(QT_PCFILEDIR)/Qt6Core.pc $(QT_PCFILEDIR)/Qt6Core_*.pc)
 
-QT_PC_BUILD_DIR := $(QT_PC_SELF_DIR)/.pcwrap
+# Where the wrapper + generator executables are built. Consumer-overridable
+# (set QT_PC_BUILD_DIR before including this file): when this repo is consumed
+# as a READ-ONLY nimble store copy, in-package writes are forbidden — the
+# consumer points the build at its own scratch dir instead. A plain checkout
+# keeps the historical in-repo default.
+QT_PC_BUILD_DIR ?= $(QT_PC_SELF_DIR)/.pcwrap
 QT_PC_WRAPPER   := $(QT_PC_BUILD_DIR)/pkg-config$(QT_PC_EXE)
 QT_PC_GENERATOR := $(QT_PC_BUILD_DIR)/prl_to_pc$(QT_PC_EXE)
 QT_PC_PKGCONFIG := $(QT_PC_WRAPPER)
 
+# A nimble store copy carries nimblemeta.json at the package root (a git
+# checkout never does). Store copies are read-only pinned content: the
+# generate path below must never write .pc trees into them.
+QT_PC_STORE_COPY := $(wildcard $(QT_PC_SELF_DIR)/nimblemeta.json)
+
 # The generator imports `regex`; auto-detect status-desktop's vendored copies
 # (siblings of this submodule) so plain `nim c` builds it offline. When they are
-# absent (standalone clone), nimble's own dependency resolution is expected.
+# absent, fall back to the consumer repo's nimble-resolved store paths
+# (QT_PC_CONSUMER_PATHS, consumer-overridable; defaults to a nimble.paths two
+# levels up, i.e. next to a vendor/ that holds this repo — a store copy's
+# consumer must set it to its own nimble.paths explicitly):
+# nim DISABLES its default ~/.nimble/pkgs2 search when the compile's cwd
+# contains a nimble.lock, so bare `import regex` resolution cannot be relied
+# on there — the paths must be explicit. A standalone clone with neither
+# still resolves via nim's default nimblepath (`nimble install regex`).
 QT_PC_REGEX_SRC := $(QT_PC_SELF_DIR)/../nim-regex/src
+QT_PC_CONSUMER_PATHS ?= $(QT_PC_SELF_DIR)/../../nimble.paths
+# The consumer controls QT_PC_CONSUMER_PATHS, so it may contain spaces: the
+# existence check uses a quoted `test -f` ($(wildcard) treats a space as a
+# pattern separator and never matches), the awk file argument is quoted, and
+# the emitted --path values are emitted QUOTED — QT_PC_GEN_PATHS is only ever
+# expanded on recipe lines, where the shell strips the quotes and keeps each
+# path whole. (A prl-to-pc checkout itself sitting under a spaced path is a
+# pre-existing, mk-wide limitation — GNU make cannot quote prerequisites.)
 ifneq (,$(wildcard $(QT_PC_REGEX_SRC)))
- QT_PC_GEN_PATHS := --path:$(QT_PC_REGEX_SRC) --path:$(QT_PC_SELF_DIR)/../nim-unicodedb/src
+ QT_PC_GEN_PATHS := --path:"$(QT_PC_REGEX_SRC)" --path:"$(QT_PC_SELF_DIR)/../nim-unicodedb/src"
+else ifneq (,$(shell test -f "$(QT_PC_CONSUMER_PATHS)" && echo 1))
+ QT_PC_GEN_PATHS := $(shell awk -F'"' '/pkgs2\/(regex|unicodedb)-/{print "--path:\"" $$2 "\""}' "$(QT_PC_CONSUMER_PATHS)")
 else
  QT_PC_GEN_PATHS :=
 endif
 
 # --- build the executables (nim on PATH; wrapper is dependency-free) ---------
+# Recipe-side quoting is defensive only: make cannot track spaced paths as
+# targets/prerequisites, so a spaced QT_PC_BUILD_DIR/checkout stays unsupported
+# — but quoted recipes at least fail loudly instead of writing to a mangled
+# relative path.
 $(QT_PC_WRAPPER): $(QT_PC_SELF_DIR)/src/pkgconfig_wrapper.nim
-	@mkdir -p $(QT_PC_BUILD_DIR)
-	$(QT_PC_NIM) c -d:release --hints:off --skipParentCfg:on -o:$@ $<
+	@mkdir -p "$(QT_PC_BUILD_DIR)"
+	$(QT_PC_NIM) c -d:release --hints:off --skipParentCfg:on -o:"$@" "$<"
 
 $(QT_PC_GENERATOR): $(QT_PC_SELF_DIR)/src/prl_to_pc.nim
-	@mkdir -p $(QT_PC_BUILD_DIR)
-	$(QT_PC_NIM) c -d:release --hints:off --skipParentCfg:on $(QT_PC_GEN_PATHS) -o:$@ $<
+	@mkdir -p "$(QT_PC_BUILD_DIR)"
+	$(QT_PC_NIM) c -d:release --hints:off --skipParentCfg:on $(QT_PC_GEN_PATHS) -o:"$@" "$<"
 
 .PHONY: qt-pkgconfig-tools
 qt-pkgconfig-tools: $(QT_PC_WRAPPER) $(QT_PC_GENERATOR)
@@ -201,10 +233,22 @@ qt-pkgconfig-tools: $(QT_PC_WRAPPER) $(QT_PC_GENERATOR)
 # Used manually on a Qt version bump (commit the result) and as the auto path below
 # when the tree is missing. Because the generator is built only in this target, a
 # normal build (tree present) never compiles it.
+# The .pc tree is COMMITTED CONTENT of this repo: when this file runs from a
+# read-only nimble store copy, generation must refuse instead of scribbling on
+# pinned content — new kits are added from a real checkout and committed.
 .PHONY: qt-pkgconfig-generate
+ifneq (,$(QT_PC_STORE_COPY))
+qt-pkgconfig-generate:
+	@echo "qt-pkgconfig.mk ERROR: this prl-to-pc copy is a read-only nimble store copy —" >&2; \
+	 echo "refusing to generate a Qt .pc tree into it (kit '$(QT_PC_KIT)', $(QT_PCFILEDIR))." >&2; \
+	 echo "Develop prl-to-pc (in status-desktop: 'nim develop status.nims prl-to-pc'), run" >&2; \
+	 echo "'make qt-pkgconfig-generate' against the checkout, and commit the new tree upstream." >&2; \
+	 exit 1
+else
 qt-pkgconfig-generate: $(QT_PC_GENERATOR)
 	@echo "[prl-to-pc] generating Qt .pc for '$(QT_PC_KIT)' from $(QT_PC_PREFIX)"
 	"$(QT_PC_GENERATOR)" generate "$$($(QMAKE) -query QT_INSTALL_LIBS)" "$(QT_PC_SELF_DIR)"
+endif
 
 # Aggregate prerequisite for the nim build: ensure the wrapper, plus this kit's .pc.
 # The .pc dependency is added ONLY when the committed tree is absent (decided at parse
