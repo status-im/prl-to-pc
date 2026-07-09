@@ -4,7 +4,10 @@ Qt ships `.prl` (qmake link metadata) files instead of pkg-config `.pc`
 files. This repo makes any Qt kit consumable through the standard
 `pkg-config` interface, on every platform, without a per-machine setup step.
 
-It is three layers plus a make include that glues them together:
+It is three layers plus **two consumer interfaces** that glue them together —
+`qt_pkgconfig.nims` for nimscript/nimble consumers and `qt-pkgconfig.mk` for
+GNU make. Both publish the same knowledge (kit derivation, the System/Generated
+probe, tool building, `.pc` generation); pick whichever your build speaks.
 
 1. **Committed, relocatable `.pc` trees** — one per Qt version/kit, mirroring
    Qt's own layout:
@@ -43,11 +46,57 @@ It is three layers plus a make include that glues them together:
    keeps the LF of a CRLF, which breaks numeric parsing in consumers like
    seaqt). For non-matching packages it is a transparent pass-through.
 
-4. **`qt-pkgconfig.mk`** — a zero-config include for GNU-make consumers that
-   wires the above together (see below).
+4. **`qt_pkgconfig.nims`** (nimscript) and **`qt-pkgconfig.mk`** (GNU make) —
+   two zero-config consumer interfaces that wire the above together.
 
 A real `pkg-config` or `pkgconf` must exist somewhere on `PATH`; the wrapper
 delegates to it and refuses to run if it can only find itself.
+
+## Consuming from nimscript (`qt_pkgconfig.nims`)
+
+**Execute it — never `include` or `import` it:**
+
+```nim
+exec "nim e --skipParentCfg:on " & quoteShell(packageRoot / "qt_pkgconfig.nims") &
+  " env " & quoteShell(myBuildDir)
+```
+
+`include`/`import` resolve at *parse* time while the `--path` switches
+`nimble.paths` supplies only take effect at script *runtime* — and a nimble
+consumer reaches this package through a **dynamic store path**
+(`<store>/pkgs2/prl_to_pc-<version>-<checksum>`). No consumer `config.nims` can
+therefore name this file at parse time. Executing it is the only shape that
+works.
+
+The only inputs are `QMAKE` (defaults to `qmake` on `PATH`) and `QT_PC_NIM`
+(defaults to `nim`) — the same two the mk takes. `--skipParentCfg:on` keeps the
+consumer's own `config.nims` out of the evaluation.
+
+| subcommand | purpose |
+|---|---|
+| `env [<buildDir>]` | print the kit's pkg-config environment as `KEY=VAL` lines on stdout; builds and writes nothing |
+| `tools <buildDir> <consumerPaths>` | build the wrapper + generator into `<buildDir>` (no-op in System mode; re-runs are no-ops) |
+| `generate [<buildDir> [<consumerPaths>]]` | (re)generate this kit's committed `.pc` tree; **refuses on a store copy** |
+
+`env` prints `QT_PC_MODE` (`system`/`generated`), `QT_PC_REASON`,
+`QT_PC_PREFIX` and `PKG_CONFIG_PATH` in both modes, plus — Generated mode only
+— `PKG_CONFIG_PREFIX_OVERRIDE`, `PKG_CONFIG_ARCH` (android kits) and
+`QT_PC_PATH_PREPEND` (the wrapper dir, to be prepended to `PATH`).
+`PKG_CONFIG_PATH` and `QT_PC_PATH_PREPEND` are values to **prepend**; the rest
+are set outright. In System mode no wrapper exists, so a consumer must not
+assume one does. `PKG_CONFIG_PATH` is printed in System mode too: without it
+`pkg-config` answers from its built-in search path (a brew/distro Qt), not the
+kit `QMAKE` selects.
+
+Because `env` costs two `qmake` subprocesses and a probe, consumers are
+expected to run it **once per build** and cache the result, keyed on the qmake
+path, this package's root and the kit. `<buildDir>` only names where the
+wrapper lives (default `<root>/.pcwrap`); consumers of a read-only store copy
+pass their own. `<consumerPaths>` is the consumer's `nimble.paths`, needed
+because the generator imports `regex` (see below).
+
+Reference consumer: status-desktop — `status.nims` runs `tools` then caches
+`env`; `config.nims` replays the cache.
 
 ## Consuming from a Makefile (`qt-pkgconfig.mk`)
 
@@ -121,45 +170,49 @@ build resolves paths in this order:
 ## Consuming as a nimble dependency
 
 ```nim
-requires "https://github.com/status-im/prl-to-pc.git#v0.2.0"
+requires "https://github.com/status-im/prl-to-pc.git#v0.3.0"
 ```
 
-The package is consumed as **package-root files** (the mk include and the
-`.pc` trees), not as Nim modules. Its manifest deliberately declares
+The package is consumed as **package-root files** (the two consumer interfaces
+and the `.pc` trees), not as Nim modules. Its manifest deliberately declares
 **neither `bin` nor `srcDir`** — both are load-bearing for store copies on
 nimble 0.22.x:
 
 - a dependency with `bin` is **built unconditionally during every consumer's
   `nimble setup`** (there is no skip mechanism); the tools are built on
-  demand by `qt-pkgconfig.mk` instead;
+  demand by `qt_pkgconfig.nims` / `qt-pkgconfig.mk` instead;
 - a dependency with `srcDir` gets its store copy **hoisted and stripped to
-  the srcDir contents** — `qt-pkgconfig.mk` and the `.pc` trees would simply
+  the srcDir contents** — the interfaces and the `.pc` trees would simply
   not exist in the store. Without it, the full repo tree is materialized.
 
 `regex`/`unicodedb` are pinned by revision (name-form requires in dependency
 manifests make consumer solves nondeterministic).
 
 The consumer resolves the package root from its generated `nimble.paths`
-(the `pkgs2/prl_to_pc-…` entry), includes `<root>/qt-pkgconfig.mk`, and sets
-`QT_PC_BUILD_DIR` (+ `QT_PC_CONSUMER_PATHS`) as described above. Store
-copies are read-only pinned content: `qt-pkgconfig-generate` detects them
-(`nimblemeta.json` at the package root) and **refuses to write** — new kits
-are generated from a real checkout and committed upstream. Reference
-consumer: status-desktop (`Makefile` + `config.nims` + the
-`nim develop status.nims prl-to-pc` flow).
+(the `pkgs2/prl_to_pc-…` entry), then either executes
+`<root>/qt_pkgconfig.nims` or includes `<root>/qt-pkgconfig.mk`, pointing the
+tool build at a consumer-local directory. Store copies are read-only pinned
+content: `generate` detects them (`nimblemeta.json` at the package root) and
+**refuses to write** — new kits are generated from a real checkout and
+committed upstream. Reference consumer: status-desktop (`status.nims` +
+`config.nims` + the `nim develop status.nims prl-to-pc` flow; its Makefile
+still includes the mk for legs that have not migrated).
 
 ## Adding a kit / bumping Qt
 
 From a real checkout (not a store copy), with the target kit's qmake:
 
 ```bash
+QMAKE=~/Qt/6.12.0/macos/bin/qmake nim e --skipParentCfg:on qt_pkgconfig.nims generate
+# or, for make consumers:
 QMAKE=~/Qt/6.12.0/macos/bin/qmake make -f qt-pkgconfig.mk qt-pkgconfig-generate
 git add 6.12.0/macos/lib/pkgconfig && git commit
 ```
 
 (In status-desktop: `nim develop status.nims prl-to-pc`, then
-`make qt-pkgconfig-generate`.) Generation is idempotent — the kit's output
-dir is wiped and rewritten.
+`nim qtPkgconfigGenerate status.nims`.) Generation is idempotent — the kit's
+output dir is wiped and rewritten. A kit the probe puts in System mode needs no
+tree, and `generate` says so instead of writing one.
 
 ## Command-line usage
 
@@ -200,9 +253,10 @@ nimble test
 ```
 
 Runs the wrapper's unit tests (glob/override/arch-suffix logic), a hermetic
-fixture-kit harness for `qt-pkgconfig.mk` (System/Generated mode selection,
-probe reasons), and a minimal-project compile check that each committed
-`.pc` tree resolves
+fixture-kit harness for **each** consumer interface — `qt-pkgconfig.mk` and
+`qt_pkgconfig.nims` — over the same three fixture kits (System/Generated mode
+selection, probe reasons, the store-copy generation refusal), and a
+minimal-project compile check that each committed `.pc` tree resolves
 correct include paths: it queries cflags through the wrapper and compiles a
 tiny Qt translation unit per kit. Kits whose real Qt install or platform
 compiler is absent are **skipped**, so the suite runs on any one machine

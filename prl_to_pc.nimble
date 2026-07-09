@@ -1,5 +1,5 @@
 # Package
-version       = "0.2.0"
+version       = "0.3.0"
 author        = "AlexJb"
 description   = "Convert Qt .prl files to pkg-config .pc files"
 license       = "MIT"
@@ -7,13 +7,20 @@ license       = "MIT"
 # consumers that pin this repo as a nimble dependency (status-desktop):
 #  - no `bin`: nimble 0.22.x builds dependency binaries UNCONDITIONALLY
 #    during every consumer's `nimble setup` (there is no skip mechanism).
-#    The tools are built on demand by qt-pkgconfig.mk instead.
+#    The tools are built on demand by qt_pkgconfig.nims / qt-pkgconfig.mk.
 #  - no `srcDir`: nimble hoists a srcDir package's store copy (srcDir
 #    contents moved to the entry root, EVERYTHING else dropped) — which
-#    would strip qt-pkgconfig.mk and the committed Qt .pc trees, the whole
-#    point of consuming this package. Without srcDir the full repo tree is
-#    materialized (sources stay importable under src/; nothing imports
-#    them as modules anyway).
+#    would strip qt_pkgconfig.nims, qt-pkgconfig.mk and the committed Qt .pc
+#    trees, the whole point of consuming this package. Without srcDir the
+#    full repo tree is materialized (sources stay importable under src/;
+#    nothing imports them as modules anyway).
+#
+# 0.3.0 adds the nimscript consumer interface, qt_pkgconfig.nims, EXECUTED as
+# `nim e <package root>/qt_pkgconfig.nims <env|tools|generate>`. It publishes
+# the same knowledge qt-pkgconfig.mk does — kit derivation, the
+# System/Generated probe, tool building, .pc generation — to consumers that do
+# not use make. qt-pkgconfig.mk is retained unchanged: this is an interface
+# addition, and no make consumer has to migrate.
 
 # Dependencies. The generator dep is pinned by revision: name-form requires
 # in dependency manifests make consumer solves nondeterministic (candidate
@@ -31,13 +38,15 @@ requires "https://github.com/nitely/nim-unicodedb.git#8938e71cdb3332b8a16eb27a69
 task build, "Build the unified pkg-config wrapper (pkg-config[.exe])":
   exec "nim c -d:release --hints:off --skipParentCfg:on -o:pkg-config src/pkgconfig_wrapper.nim"
 
-# Unit-tests the wrapper logic, the qt-pkgconfig.mk conversion harness, plus a
-# minimal-project compile check that the committed .pc resolve correct Qt include
-# paths per platform (kits/compilers that are absent are skipped, so this is
-# runnable on any one machine / CI leg).
+# Unit-tests the wrapper logic, both consumer interfaces against the same three
+# fixture Kits (make and nimscript), plus a minimal-project compile check that
+# the committed .pc resolve correct Qt include paths per platform
+# (kits/compilers that are absent are skipped, so this is runnable on any one
+# machine / CI leg).
 task test, "Run prl-to-pc tests":
   exec "nim c -r --hints:off --skipParentCfg:on --path:src tests/test_pkgconfig_wrapper.nim"
   exec "nim c -r --hints:off --skipParentCfg:on --path:src tests/test_qt_pkgconfig_mk.nim"
+  exec "nim c -r --hints:off --skipParentCfg:on --path:src tests/test_qt_pkgconfig_nims.nim"
   exec "nim c -r --hints:off --skipParentCfg:on --path:src tests/test_committed_pc_compile.nim"
 
 # Tasks

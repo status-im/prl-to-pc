@@ -1,7 +1,7 @@
 nimcache/
 nimblecache/
 htmldocs/
-# built tools (wrapper + generator) produced by qt-pkgconfig.mk
+# built tools (wrapper + generator) produced by qt_pkgconfig.nims / qt-pkgconfig.mk
 .pcwrap/
 /pkg-config
 /prl_to_pc
@@ -9,6 +9,7 @@ htmldocs/
 tests/test_pkgconfig_wrapper
 tests/test_committed_pc_compile
 tests/test_qt_pkgconfig_mk
+tests/test_qt_pkgconfig_nims
 *.exe
 *.dll
 *.so
