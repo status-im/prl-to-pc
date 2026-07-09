@@ -197,22 +197,33 @@ QT_PC_STORE_COPY := $(wildcard $(QT_PC_SELF_DIR)/nimblemeta.json)
 # still resolves via nim's default nimblepath (`nimble install regex`).
 QT_PC_REGEX_SRC := $(QT_PC_SELF_DIR)/../nim-regex/src
 QT_PC_CONSUMER_PATHS ?= $(QT_PC_SELF_DIR)/../../nimble.paths
+# The consumer controls QT_PC_CONSUMER_PATHS, so it may contain spaces: the
+# existence check uses a quoted `test -f` ($(wildcard) treats a space as a
+# pattern separator and never matches), the awk file argument is quoted, and
+# the emitted --path values are emitted QUOTED — QT_PC_GEN_PATHS is only ever
+# expanded on recipe lines, where the shell strips the quotes and keeps each
+# path whole. (A prl-to-pc checkout itself sitting under a spaced path is a
+# pre-existing, mk-wide limitation — GNU make cannot quote prerequisites.)
 ifneq (,$(wildcard $(QT_PC_REGEX_SRC)))
- QT_PC_GEN_PATHS := --path:$(QT_PC_REGEX_SRC) --path:$(QT_PC_SELF_DIR)/../nim-unicodedb/src
-else ifneq (,$(wildcard $(QT_PC_CONSUMER_PATHS)))
- QT_PC_GEN_PATHS := $(shell awk -F'"' '/pkgs2\/(regex|unicodedb)-/{print "--path:" $$2}' $(QT_PC_CONSUMER_PATHS))
+ QT_PC_GEN_PATHS := --path:"$(QT_PC_REGEX_SRC)" --path:"$(QT_PC_SELF_DIR)/../nim-unicodedb/src"
+else ifneq (,$(shell test -f "$(QT_PC_CONSUMER_PATHS)" && echo 1))
+ QT_PC_GEN_PATHS := $(shell awk -F'"' '/pkgs2\/(regex|unicodedb)-/{print "--path:\"" $$2 "\""}' "$(QT_PC_CONSUMER_PATHS)")
 else
  QT_PC_GEN_PATHS :=
 endif
 
 # --- build the executables (nim on PATH; wrapper is dependency-free) ---------
+# Recipe-side quoting is defensive only: make cannot track spaced paths as
+# targets/prerequisites, so a spaced QT_PC_BUILD_DIR/checkout stays unsupported
+# — but quoted recipes at least fail loudly instead of writing to a mangled
+# relative path.
 $(QT_PC_WRAPPER): $(QT_PC_SELF_DIR)/src/pkgconfig_wrapper.nim
-	@mkdir -p $(QT_PC_BUILD_DIR)
-	$(QT_PC_NIM) c -d:release --hints:off --skipParentCfg:on -o:$@ $<
+	@mkdir -p "$(QT_PC_BUILD_DIR)"
+	$(QT_PC_NIM) c -d:release --hints:off --skipParentCfg:on -o:"$@" "$<"
 
 $(QT_PC_GENERATOR): $(QT_PC_SELF_DIR)/src/prl_to_pc.nim
-	@mkdir -p $(QT_PC_BUILD_DIR)
-	$(QT_PC_NIM) c -d:release --hints:off --skipParentCfg:on $(QT_PC_GEN_PATHS) -o:$@ $<
+	@mkdir -p "$(QT_PC_BUILD_DIR)"
+	$(QT_PC_NIM) c -d:release --hints:off --skipParentCfg:on $(QT_PC_GEN_PATHS) -o:"$@" "$<"
 
 .PHONY: qt-pkgconfig-tools
 qt-pkgconfig-tools: $(QT_PC_WRAPPER) $(QT_PC_GENERATOR)
