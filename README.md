@@ -111,11 +111,20 @@ version, platform and android ABI are all derived from
 The include picks one of two modes automatically at make parse time
 (re-decided on every invocation, so switching kits needs no cleaning). The
 probe: with the kit's own `pkgconfig` dir prepended to `PKG_CONFIG_PATH`,
-`pkg-config --variable=libdir Qt6Core` must name the same directory as
-`qmake -query QT_INSTALL_LIBS` — compared raw first, then with both sides
-canonicalised, so that a symlinked route (`/opt/homebrew/opt/qt`) or the
-unfolded `..` segments of a relocatable `.pc` do not read as a wrong kit. A
-one-line `$(info …)` reports the chosen mode and reason.
+`pkg-config --variable=libdir Qt6Core` must answer with the kit's own
+metadata. Three ways it can, tried in order:
+
+1. the libdir string-equals `qmake -query QT_INSTALL_LIBS`;
+2. both canonicalise to one directory — a symlinked route
+   (`/opt/homebrew/opt/qt`, `/var` -> `/private/var`) or the unfolded `..`
+   segments of a relocatable `.pc`;
+3. the two libdirs are genuinely different directories, but the `Qt6Core.pc`
+   under each is the same file — the nix shape, where qmake names an
+   aggregate buildEnv (`…-qt6-env/lib`) and the `.pc` linked into it names
+   the component store path (`…-qtbase-6.10.2/lib`).
+
+A one-line `$(info …)` reports the chosen mode and which of the three
+answered.
 
 - **System mode** (probe passes): the kit already ships usable `.pc`
   metadata — its `pkgconfig` dir is prepended to `PKG_CONFIG_PATH` and the

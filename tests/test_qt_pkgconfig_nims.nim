@@ -6,7 +6,7 @@
 ## Sibling of test_qt_pkgconfig_mk.nim, which pins the same contract for the
 ## make interface. The two interfaces publish one body of knowledge (kit
 ## derivation, the Probe, tool building, .pc generation), so both suites drive
-## the same five fixture Kit variants and assert the same choices:
+## the same six fixture Kit variants and assert the same choices:
 ##
 ##   correct       Kit ships a pkgconfig/ dir whose Qt6Core.pc libdir matches
 ##                 qmake's QT_INSTALL_LIBS.  Probe passes -> System mode.
@@ -14,6 +14,8 @@
 ##                 `..` segments pkg-config never folds.  -> System mode.
 ##   symlinked     Same dir, qmake naming a symlinked route and the .pc the
 ##                 resolved one.  -> System mode.
+##   nix-env       Two genuinely different dirs — an aggregate buildEnv and the
+##                 component store path — holding one .pc file.  -> System mode.
 ##   broken-prefix Kit ships a Qt6Core.pc pointing at a build-farm libdir.
 ##                 Probe sees a mismatch -> Generated mode.
 ##   no-pc         Kit ships no pkgconfig/ dir (mobile-Kit shape).
@@ -165,6 +167,21 @@ proc makeRelocatablePcKit(kitLibDir: string) =
     "libdir=${prefix}/lib\n" &
     "Name: Qt6Core\nDescription: Qt6Core\nVersion: " & FakeVersion & "\n")
 
+proc makeNixEnvKit(sandboxDir, kitLibDir: string) =
+  ## qmake names an aggregate buildEnv whose pkgconfig dir is a farm of symlinks,
+  ## while the Qt6Core.pc linked into it names the component store path it came
+  ## from: two genuinely different directories holding one file.
+  let component = sandboxDir / "store" / "qtbase-" & FakeVersion
+  let componentPcDir = component / "lib" / "pkgconfig"
+  createDir(componentPcDir)
+  writeFile(componentPcDir / "Qt6Core.pc",
+    "prefix=" & component & "\n" &
+    "libdir=${prefix}/lib\n" &
+    "Name: Qt6Core\nDescription: Qt6Core\nVersion: " & FakeVersion & "\n")
+  let envPcDir = kitLibDir / "pkgconfig"
+  createDir(envPcDir)
+  createSymlink(componentPcDir / "Qt6Core.pc", envPcDir / "Qt6Core.pc")
+
 proc makeSymlinkedKit(sandboxDir: string) =
   ## The Kit lives under fakekit-real/ and is reached through the fakekit
   ## symlink qmake reports, while its .pc hardcodes the resolved path.
@@ -237,6 +254,22 @@ suite "qt_pkgconfig.nims: env — the probe-selected environment":
     check code == 0
     let kv = parseKV(output)
     check valueOf(kv, "QT_PC_MODE") == "system"
+    check valueOf(kv, "PKG_CONFIG_PATH") == f.kitLibs / "pkgconfig"
+    check not hasKey(kv, "PKG_CONFIG_PREFIX_OVERRIDE")
+
+  test "nix-env Kit — a different libdir, but the Kit's own .pc, selects System mode":
+    ## The probe's answer names the component store path, not the buildEnv qmake
+    ## reports, and the two never resolve to one directory.  The .pc that
+    ## answered is still the Kit's own, so the Kit is pkg-config-ready — and
+    ## Generated mode could not serve it anyway (its committed tree would be
+    ## keyed by a store hash that changes on every eval).
+    let f = fixture("nixenv")
+    makeNixEnvKit(f.sandbox, f.kitLibs)
+    let (output, code) = runNims(f.modDir, f.qmake, ["env", f.buildDir])
+    check code == 0
+    let kv = parseKV(output)
+    check valueOf(kv, "QT_PC_MODE") == "system"
+    check valueOf(kv, "QT_PC_REASON").contains("the kit's own Qt6Core.pc answered")
     check valueOf(kv, "PKG_CONFIG_PATH") == f.kitLibs / "pkgconfig"
     check not hasKey(kv, "PKG_CONFIG_PREFIX_OVERRIDE")
 
