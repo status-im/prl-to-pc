@@ -125,9 +125,12 @@ QT_PC_PROBE_LIBDIR := $(shell PKG_CONFIG_PATH="$(QT_PC_KIT_PCDIR)$(QT_PC_PATHSEP
 # not.  $(realpath) folds both, and answers empty for a path that does not exist
 # — so a genuine Broken prefix (a build-farm dir absent from this machine) still
 # fails the test.  Raw equality is tried first: it needs no filesystem access and
-# survives paths with spaces, which $(realpath) cannot represent.
-QT_PC_LIBS_REAL    := $(realpath $(QT_PC_LIBS))
-QT_PC_PROBE_REAL   := $(realpath $(QT_PC_PROBE_LIBDIR))
+# survives paths with spaces, which $(realpath) cannot represent — it splits its
+# argument on whitespace, so a path holding one is left uncanonicalised (the raw
+# compare then decides alone) rather than canonicalised word by word into an
+# answer about directories nobody asked about.
+QT_PC_LIBS_REAL    := $(if $(filter 1,$(words $(QT_PC_LIBS))),$(realpath $(QT_PC_LIBS)))
+QT_PC_PROBE_REAL   := $(if $(filter 1,$(words $(QT_PC_PROBE_LIBDIR))),$(realpath $(QT_PC_PROBE_LIBDIR)))
 QT_PC_PROBE_MATCH  :=
 ifeq ($(QT_PC_PROBE_LIBDIR),$(QT_PC_LIBS))
  QT_PC_PROBE_MATCH := 1

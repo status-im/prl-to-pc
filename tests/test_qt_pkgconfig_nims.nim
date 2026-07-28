@@ -28,6 +28,12 @@
 ## baseline) — the correct/System fixture needs pkg-config to answer the Probe.
 ## No real Qt install required.  Each test run creates a fresh temp sandbox.
 ##
+## The harness is POSIX-only — the fixture qmake it writes is a /bin/sh script —
+## which is why the symlinked variant expects System mode unconditionally.
+## `canonicalDir` resolves symlinks on POSIX only; Windows gets the `..` fold
+## alone (nimscript has no realpath, and `cd` does not follow reparse points),
+## so the variant would need a different expectation there.
+##
 ## The `tools` build of the generator needs `regex`; the tests that exercise it
 ## are skipped when no nimble.paths can supply it (see consumerPaths()).
 
