@@ -109,6 +109,32 @@ proc qmakeQuery(what: string): string =
     die "'" & cmd & "' produced nothing — is qmake on PATH, or QMAKE set to one?"
   output.strip
 
+proc canonicalDir(p: string): string =
+  ## The comparable spelling of a directory: `.`/`..` folded (pkg-config never
+  ## folds them — a relocatable .pc answers `<libs>/pkgconfig/../../lib`) and
+  ## symlinks resolved (`/opt/homebrew/opt/qt`, macOS `/var` -> `/private/var`).
+  ## "" when the directory does not exist, so a Broken prefix stays a mismatch.
+  ## Windows gets the textual fold only; nimscript has no realpath, and `cd`
+  ## does not resolve reparse points.
+  if p.len == 0: return ""
+  result = p.normalizedPath
+  if not dirExists(result): return ""
+  if hostOS != "windows":
+    let (resolved, rc) = gorgeEx("cd -- " & quoteShell(result) & " && pwd -P")
+    if rc == 0 and resolved.strip.len > 0: result = resolved.strip
+
+proc sameQt6CorePc(kitPcDir, libDir: string): bool =
+  ## Is the Qt6Core.pc the probe answered from the kit's OWN one? The two can
+  ## sit in genuinely different directories and still be one file: nix hands
+  ## qmake an aggregate buildEnv (`…-qt6-env/lib`, a farm of symlinks) while the
+  ## Qt6Core.pc linked into it names the component store path it came from.
+  ## Compared by content, not by inode: that holds for an env that copies as
+  ## well as one that links, and nimscript cannot resolve a symlinked FILE.
+  let kitPc = kitPcDir / "Qt6Core.pc"
+  let answeringPc = libDir / "pkgconfig" / "Qt6Core.pc"
+  fileExists(kitPc) and fileExists(answeringPc) and
+    readFile(kitPc) == readFile(answeringPc)
+
 proc hasQt6CorePc(dir: string): bool =
   ## Matches the mk's parse-time wildcard: the bare desktop name plus the
   ## Android arch-suffixed one (Qt6Core_arm64-v8a.pc).
@@ -140,9 +166,11 @@ proc androidArch(kitName: string): string =
 proc probe(): Kit =
   ## The sole authority for System vs Generated. With the kit's own pkgconfig
   ## dir prepended to PKG_CONFIG_PATH, `pkg-config --variable=libdir Qt6Core`
-  ## must string-equal `qmake -query QT_INSTALL_LIBS` exactly. Comparing the
-  ## VALUE (not merely `--exists`) is what rejects a wrong kit: a brew or distro
-  ## Qt satisfies `--exists` even when QMAKE points somewhere else entirely.
+  ## must answer with the kit's OWN metadata: the libdir string-equals
+  ## `qmake -query QT_INSTALL_LIBS`, or both canonicalise to one directory, or
+  ## the Qt6Core.pc under each is the same file. Looking at the answer (not
+  ## merely `--exists`) is what rejects a wrong kit: a brew or distro Qt
+  ## satisfies `--exists` even when QMAKE points somewhere else entirely.
   result.prefix = qmakeQuery("QT_INSTALL_PREFIX")
   result.libs = qmakeQuery("QT_INSTALL_LIBS")
   result.name = result.prefix.lastPathPart
@@ -158,9 +186,22 @@ proc probe(): Kit =
 
   let kitHasPc = hasQt6CorePc(result.pcDir)
   let libDir = probeLibDir.strip
+  # Raw first (no filesystem access), then canonicalised: the two answers reach
+  # the same directory by different routes far more often than they disagree.
+  # Failing both, the directories are genuinely different and only the files can
+  # say whether the answer is still the kit's own metadata (the nix shape).
+  var via = ""
   if libDir == result.libs:
+    via = "libdir matches qmake QT_INSTALL_LIBS"
+  elif libDir.len > 0:
+    let kitReal = canonicalDir(result.libs)
+    if kitReal.len > 0 and canonicalDir(libDir) == kitReal:
+      via = "libdir resolves to qmake QT_INSTALL_LIBS"
+    elif sameQt6CorePc(result.pcDir, libDir):
+      via = "the kit's own Qt6Core.pc answered, naming libdir " & libDir
+  if via.len > 0:
     result.mode = mSystem
-    result.reason = "system mode: Qt6Core.pc libdir matches qmake QT_INSTALL_LIBS"
+    result.reason = "system mode: " & via
   else:
     # Either the probe answered nothing (no pkg-config, no Qt6Core anywhere) or
     # it answered with someone else's libdir. The parse-time wildcard separates
