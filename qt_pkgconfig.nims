@@ -109,6 +109,20 @@ proc qmakeQuery(what: string): string =
     die "'" & cmd & "' produced nothing — is qmake on PATH, or QMAKE set to one?"
   output.strip
 
+proc canonicalDir(p: string): string =
+  ## The comparable spelling of a directory: `.`/`..` folded (pkg-config never
+  ## folds them — a relocatable .pc answers `<libs>/pkgconfig/../../lib`) and
+  ## symlinks resolved (`/opt/homebrew/opt/qt`, macOS `/var` -> `/private/var`).
+  ## "" when the directory does not exist, so a Broken prefix stays a mismatch.
+  ## Windows gets the textual fold only; nimscript has no realpath, and `cd`
+  ## does not resolve reparse points.
+  if p.len == 0: return ""
+  result = p.normalizedPath
+  if not dirExists(result): return ""
+  if hostOS != "windows":
+    let (resolved, rc) = gorgeEx("cd -- " & quoteShell(result) & " && pwd -P")
+    if rc == 0 and resolved.strip.len > 0: result = resolved.strip
+
 proc hasQt6CorePc(dir: string): bool =
   ## Matches the mk's parse-time wildcard: the bare desktop name plus the
   ## Android arch-suffixed one (Qt6Core_arm64-v8a.pc).
@@ -140,9 +154,10 @@ proc androidArch(kitName: string): string =
 proc probe(): Kit =
   ## The sole authority for System vs Generated. With the kit's own pkgconfig
   ## dir prepended to PKG_CONFIG_PATH, `pkg-config --variable=libdir Qt6Core`
-  ## must string-equal `qmake -query QT_INSTALL_LIBS` exactly. Comparing the
-  ## VALUE (not merely `--exists`) is what rejects a wrong kit: a brew or distro
-  ## Qt satisfies `--exists` even when QMAKE points somewhere else entirely.
+  ## must name the same directory as `qmake -query QT_INSTALL_LIBS`. Comparing
+  ## the VALUE (not merely `--exists`) is what rejects a wrong kit: a brew or
+  ## distro Qt satisfies `--exists` even when QMAKE points somewhere else
+  ## entirely.
   result.prefix = qmakeQuery("QT_INSTALL_PREFIX")
   result.libs = qmakeQuery("QT_INSTALL_LIBS")
   result.name = result.prefix.lastPathPart
@@ -158,7 +173,13 @@ proc probe(): Kit =
 
   let kitHasPc = hasQt6CorePc(result.pcDir)
   let libDir = probeLibDir.strip
-  if libDir == result.libs:
+  # Raw first (no filesystem access), then canonicalised: the two answers reach
+  # the same directory by different routes far more often than they disagree.
+  var matches = libDir == result.libs
+  if not matches and libDir.len > 0:
+    let kitReal = canonicalDir(result.libs)
+    matches = kitReal.len > 0 and canonicalDir(libDir) == kitReal
+  if matches:
     result.mode = mSystem
     result.reason = "system mode: Qt6Core.pc libdir matches qmake QT_INSTALL_LIBS"
   else:

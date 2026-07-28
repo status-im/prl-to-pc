@@ -27,7 +27,9 @@
 # The Probe is the sole authority for the choice (no override knob, no version
 # tables): with the Kit's `pkgconfig` dir (= `qmake -query QT_INSTALL_LIBS`/
 # pkgconfig) prepended to PKG_CONFIG_PATH, `pkg-config --variable=libdir Qt6Core`
-# must string-equal `qmake -query QT_INSTALL_LIBS` exactly. Pass → System mode;
+# must name the same directory as `qmake -query QT_INSTALL_LIBS` (compared
+# raw first, then with both sides canonicalised, so a symlinked route or the
+# `..` segments of a relocatable .pc do not read as a wrong Kit). Pass → System mode;
 # any failure (no pkg-config on PATH, no Qt6Core, or a Broken prefix whose libdir
 # differs) → Generated mode. Only Qt6Core is probed — deliberately simple; a
 # missing module in an otherwise-correct Kit surfaces later as a normal pkg-config
@@ -103,10 +105,10 @@ endif
 # for Qt6Core's libdir with that dir prepended to PKG_CONFIG_PATH. The env prefix
 # lives INSIDE the $(shell) invocation, scoped to the probe command only — it is
 # never leaked into the real exports below. stderr is redirected so pkg-config
-# warnings/errors never reach the terminal. The libdir must string-equal qmake's
-# QT_INSTALL_LIBS exactly: comparing the value (not merely `--exists`) is what
-# rejects a wrong Kit — e.g. a distro Qt in /usr would satisfy `--exists` even
-# when QMAKE points elsewhere.
+# warnings/errors never reach the terminal. The libdir must name the same
+# directory as qmake's QT_INSTALL_LIBS: comparing the value (not merely
+# `--exists`) is what rejects a wrong Kit — e.g. a distro Qt in /usr would
+# satisfy `--exists` even when QMAKE points elsewhere.
 QT_PC_LIBS         := $(shell $(QMAKE) -query QT_INSTALL_LIBS)
 QT_PC_KIT_PCDIR    := $(QT_PC_LIBS)/pkgconfig
 # Parse-time wildcard: does the Kit ship any Qt6Core .pc in its own pkgconfig dir?
@@ -116,6 +118,25 @@ QT_PC_KIT_PCDIR    := $(QT_PC_LIBS)/pkgconfig
 QT_PC_KIT_HAS_PC   := $(wildcard $(QT_PC_KIT_PCDIR)/Qt6Core.pc $(QT_PC_KIT_PCDIR)/Qt6Core_*.pc)
 QT_PC_PROBE_LIBDIR := $(shell PKG_CONFIG_PATH="$(QT_PC_KIT_PCDIR)$(QT_PC_PATHSEP)$(PKG_CONFIG_PATH)" pkg-config --variable=libdir Qt6Core 2>/dev/null)
 
+# The two answers routinely spell the SAME directory differently, so a raw string
+# compare is not enough: a relocatable .pc yields `<libs>/pkgconfig/../../lib`
+# (pkg-config never folds `..`), and either side may travel through a symlink
+# (`/opt/homebrew/opt/qt`, macOS `/var` -> `/private/var`) while the other does
+# not.  $(realpath) folds both, and answers empty for a path that does not exist
+# — so a genuine Broken prefix (a build-farm dir absent from this machine) still
+# fails the test.  Raw equality is tried first: it needs no filesystem access and
+# survives paths with spaces, which $(realpath) cannot represent.
+QT_PC_LIBS_REAL    := $(realpath $(QT_PC_LIBS))
+QT_PC_PROBE_REAL   := $(realpath $(QT_PC_PROBE_LIBDIR))
+QT_PC_PROBE_MATCH  :=
+ifeq ($(QT_PC_PROBE_LIBDIR),$(QT_PC_LIBS))
+ QT_PC_PROBE_MATCH := 1
+else ifneq ($(strip $(QT_PC_LIBS_REAL)),)
+ ifeq ($(QT_PC_PROBE_REAL),$(QT_PC_LIBS_REAL))
+  QT_PC_PROBE_MATCH := 1
+ endif
+endif
+
 ifeq ($(strip $(QT_PC_PROBE_LIBDIR)),)
  # Empty output: pkg-config missing/unusable, OR kit ships no Qt6Core.pc and no ambient one.
  QT_PC_MODE   := generated
@@ -124,7 +145,7 @@ ifeq ($(strip $(QT_PC_PROBE_LIBDIR)),)
  else
   QT_PC_REASON := generated mode: kit ships Qt6Core.pc but probe got no answer (pkg-config missing or unusable)
  endif
-else ifeq ($(QT_PC_PROBE_LIBDIR),$(QT_PC_LIBS))
+else ifeq ($(QT_PC_PROBE_MATCH),1)
  QT_PC_MODE   := system
  QT_PC_REASON := system mode: Qt6Core.pc libdir matches qmake QT_INSTALL_LIBS
 else

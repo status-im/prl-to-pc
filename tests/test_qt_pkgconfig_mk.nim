@@ -3,14 +3,20 @@
 ## Hermetic fixture-Kit harness for qt-pkgconfig.mk.
 ##
 ## Pins the public contract of qt-pkgconfig.mk across BOTH modes selected by the
-## Probe (the parse-time libdir string-equality test between the Kit's own
-## Qt6Core.pc and qmake's QT_INSTALL_LIBS).
+## Probe (the parse-time test that the Kit's own Qt6Core.pc libdir names the same
+## directory as qmake's QT_INSTALL_LIBS).
 ##
-## Three fixture Kit variants are exercised:
+## Five fixture Kit variants are exercised:
 ##
 ##   correct       Kit ships a Committed-tree-style pkgconfig/ dir whose
 ##                 Qt6Core.pc libdir matches qmake's QT_INSTALL_LIBS answer.
 ##                 The Probe passes → System mode.
+##
+##   relocatable   Same dir, reached through ${pcfiledir}: the answer carries
+##                 `..` segments pkg-config never folds. → System mode.
+##
+##   symlinked     Same dir, qmake reporting a symlinked route and the .pc the
+##                 resolved one. → System mode.
 ##
 ##   broken-prefix Kit ships a pkgconfig/ dir whose Qt6Core.pc libdir points at
 ##                 a build-farm path (Broken prefix, e.g. /Users/qt/work/install).
@@ -162,6 +168,30 @@ proc makeNoPcKit(kitLibDir: string) =
   ## no-pc variant: kit ships no pkgconfig/ dir (mobile-Kit shape).
   createDir(kitLibDir)  # lib/ dir present, but pkgconfig/ absent
 
+proc makeRelocatablePcKit(kitLibDir: string) =
+  ## relocatable variant: the Kit's Qt6Core.pc expresses its prefix relative to
+  ## ${pcfiledir}, so pkg-config answers `<lib>/pkgconfig/../../lib` — the very
+  ## dir QT_INSTALL_LIBS names, spelled with `..` segments pkg-config never folds.
+  let pcDir = kitLibDir / "pkgconfig"
+  createDir(pcDir)
+  writeFile(pcDir / "Qt6Core.pc",
+    "prefix=${pcfiledir}/../..\n" &
+    "libdir=${prefix}/lib\n" &
+    "Name: Qt6Core\nDescription: Qt6Core\nVersion: " & FakeVersion & "\n")
+
+proc makeSymlinkedKit(sandboxDir: string) =
+  ## symlinked variant: the Kit lives under fakekit-real/ and is reached through
+  ## the fakekit symlink that qmake reports, while its .pc hardcodes the resolved
+  ## path — the brew Cellar shape.  One directory, two spellings.
+  let realKit = sandboxDir / "fakekit-real" / FakeVersion / FakeKit
+  let pcDir = realKit / "lib" / "pkgconfig"
+  createDir(pcDir)
+  writeFile(pcDir / "Qt6Core.pc",
+    "prefix=" & realKit & "\n" &
+    "libdir=" & realKit / "lib" & "\n" &
+    "Name: Qt6Core\nDescription: Qt6Core\nVersion: " & FakeVersion & "\n")
+  createSymlink(sandboxDir / "fakekit-real", sandboxDir / "fakekit")
+
 # ─── contract verifiers ───────────────────────────────────────────────────────
 
 proc checkGeneratedModeContract(sandboxDir, modDir, qmakePath: string,
@@ -290,6 +320,31 @@ suite "qt-pkgconfig.mk: Probe-selected mode contract":
     let qmake = createFakeQmake(sb, kitPrefix, kitLibs)
     makeBrokenPrefixKit(kitLibs)
     checkGeneratedModeContract(sb, modDir, qmake, "libdir mismatch (broken prefix)")
+
+  test "relocatable-pc Kit — `..` segments still select System mode":
+    ## The Kit's own .pc is correct but reaches its libdir through ${pcfiledir},
+    ## so the Probe's answer carries `..` segments pkg-config does not fold.  It
+    ## names QT_INSTALL_LIBS, so the Kit must be trusted: System mode.
+    let sb = freshSandbox("relocatable")
+    let modDir = stageModule(sb)
+    seedCommittedTree(modDir)
+    let kitPrefix = sb / "fakekit" / FakeVersion / FakeKit
+    let kitLibs   = kitPrefix / "lib"
+    let qmake = createFakeQmake(sb, kitPrefix, kitLibs)
+    makeRelocatablePcKit(kitLibs)
+    checkSystemModeContract(sb, modDir, qmake)
+
+  test "symlinked Kit — a symlinked route still selects System mode":
+    ## qmake reports the symlinked route, the .pc hardcodes the resolved one.
+    ## Both name one directory, so the Kit must be trusted: System mode.
+    let sb = freshSandbox("symlinked")
+    let modDir = stageModule(sb)
+    seedCommittedTree(modDir)
+    let kitPrefix = sb / "fakekit" / FakeVersion / FakeKit
+    let kitLibs   = kitPrefix / "lib"
+    let qmake = createFakeQmake(sb, kitPrefix, kitLibs)
+    makeSymlinkedKit(sb)
+    checkSystemModeContract(sb, modDir, qmake)
 
   test "no-pc Kit — Probe falls back to Generated mode":
     ## no-pc Kit ships no pkgconfig/ dir at all (mobile-Kit shape), so the Probe

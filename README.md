@@ -111,9 +111,11 @@ version, platform and android ABI are all derived from
 The include picks one of two modes automatically at make parse time
 (re-decided on every invocation, so switching kits needs no cleaning). The
 probe: with the kit's own `pkgconfig` dir prepended to `PKG_CONFIG_PATH`,
-`pkg-config --variable=libdir Qt6Core` must string-equal
-`qmake -query QT_INSTALL_LIBS` exactly. A one-line `$(info …)` reports the
-chosen mode and reason.
+`pkg-config --variable=libdir Qt6Core` must name the same directory as
+`qmake -query QT_INSTALL_LIBS` — compared raw first, then with both sides
+canonicalised, so that a symlinked route (`/opt/homebrew/opt/qt`) or the
+unfolded `..` segments of a relocatable `.pc` do not read as a wrong kit. A
+one-line `$(info …)` reports the chosen mode and reason.
 
 - **System mode** (probe passes): the kit already ships usable `.pc`
   metadata — its `pkgconfig` dir is prepended to `PKG_CONFIG_PATH` and the

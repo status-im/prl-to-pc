@@ -6,10 +6,14 @@
 ## Sibling of test_qt_pkgconfig_mk.nim, which pins the same contract for the
 ## make interface. The two interfaces publish one body of knowledge (kit
 ## derivation, the Probe, tool building, .pc generation), so both suites drive
-## the same three fixture Kit variants and assert the same choices:
+## the same five fixture Kit variants and assert the same choices:
 ##
 ##   correct       Kit ships a pkgconfig/ dir whose Qt6Core.pc libdir matches
 ##                 qmake's QT_INSTALL_LIBS.  Probe passes -> System mode.
+##   relocatable   Same dir reached through ${pcfiledir}, so the answer carries
+##                 `..` segments pkg-config never folds.  -> System mode.
+##   symlinked     Same dir, qmake naming a symlinked route and the .pc the
+##                 resolved one.  -> System mode.
 ##   broken-prefix Kit ships a Qt6Core.pc pointing at a build-farm libdir.
 ##                 Probe sees a mismatch -> Generated mode.
 ##   no-pc         Kit ships no pkgconfig/ dir (mobile-Kit shape).
@@ -145,6 +149,28 @@ proc makeBrokenPrefixKit(kitLibDir: string) =
 proc makeNoPcKit(kitLibDir: string) =
   createDir(kitLibDir)
 
+proc makeRelocatablePcKit(kitLibDir: string) =
+  ## The .pc reaches its libdir through ${pcfiledir}, so pkg-config answers
+  ## `<lib>/pkgconfig/../../lib` — QT_INSTALL_LIBS spelled with `..` segments.
+  let pcDir = kitLibDir / "pkgconfig"
+  createDir(pcDir)
+  writeFile(pcDir / "Qt6Core.pc",
+    "prefix=${pcfiledir}/../..\n" &
+    "libdir=${prefix}/lib\n" &
+    "Name: Qt6Core\nDescription: Qt6Core\nVersion: " & FakeVersion & "\n")
+
+proc makeSymlinkedKit(sandboxDir: string) =
+  ## The Kit lives under fakekit-real/ and is reached through the fakekit
+  ## symlink qmake reports, while its .pc hardcodes the resolved path.
+  let realKit = sandboxDir / "fakekit-real" / FakeVersion / FakeKit
+  let pcDir = realKit / "lib" / "pkgconfig"
+  createDir(pcDir)
+  writeFile(pcDir / "Qt6Core.pc",
+    "prefix=" & realKit & "\n" &
+    "libdir=" & realKit / "lib" & "\n" &
+    "Name: Qt6Core\nDescription: Qt6Core\nVersion: " & FakeVersion & "\n")
+  createSymlink(sandboxDir / "fakekit-real", sandboxDir / "fakekit")
+
 type Fixture = object
   sandbox, modDir, qmake, kitPrefix, kitLibs, buildDir: string
 
@@ -181,6 +207,32 @@ suite "qt_pkgconfig.nims: env — the probe-selected environment":
     check not hasKey(kv, "QT_PC_PATH_PREPEND")
     check not hasKey(kv, "PKG_CONFIG_PREFIX_OVERRIDE")
     check not hasKey(kv, "PKG_CONFIG_ARCH")
+
+  test "relocatable-pc Kit — `..` segments still select System mode":
+    ## The Kit's .pc is correct but answers through ${pcfiledir}, so the probe's
+    ## libdir carries `..` segments pkg-config does not fold.  It still names
+    ## QT_INSTALL_LIBS, so the Kit is trusted and its own pcDir is published.
+    let f = fixture("relocatable")
+    makeRelocatablePcKit(f.kitLibs)
+    let (output, code) = runNims(f.modDir, f.qmake, ["env", f.buildDir])
+    check code == 0
+    let kv = parseKV(output)
+    check valueOf(kv, "QT_PC_MODE") == "system"
+    check valueOf(kv, "PKG_CONFIG_PATH") == f.kitLibs / "pkgconfig"
+    check not hasKey(kv, "PKG_CONFIG_PREFIX_OVERRIDE")
+
+  test "symlinked Kit — a symlinked route still selects System mode":
+    ## qmake reports the symlinked route, the .pc hardcodes the resolved one.
+    ## One directory, two spellings — the Kit is trusted, and the published
+    ## pcDir stays the route qmake named.
+    let f = fixture("symlinked")
+    makeSymlinkedKit(f.sandbox)
+    let (output, code) = runNims(f.modDir, f.qmake, ["env", f.buildDir])
+    check code == 0
+    let kv = parseKV(output)
+    check valueOf(kv, "QT_PC_MODE") == "system"
+    check valueOf(kv, "PKG_CONFIG_PATH") == f.kitLibs / "pkgconfig"
+    check not hasKey(kv, "PKG_CONFIG_PREFIX_OVERRIDE")
 
   test "broken-prefix Kit — Generated mode: committed tree, override, wrapper dir":
     let f = fixture("broken")
