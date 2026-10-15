@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6SerialBus
 Description: Qt6SerialBus module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtSerialBus -framework QtCore
+Libs: -F${libdir} -framework QtSerialBus -framework QtCore -framework QtNetwork
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtSerialBus.framework/Headers -DQT_SERIALBUS_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Network

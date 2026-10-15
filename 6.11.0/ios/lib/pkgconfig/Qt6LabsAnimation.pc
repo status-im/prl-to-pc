@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6LabsAnimation
 Description: Qt6LabsAnimation module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtLabsAnimation -framework QtCore
+Libs: -F${libdir} -framework QtLabsAnimation -framework QtQml -framework QtQuick
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtLabsAnimation.framework/Headers -DQT_LABSANIMATION_LIB
-Requires: Qt6Core
+Requires: Qt6Qml Qt6Quick

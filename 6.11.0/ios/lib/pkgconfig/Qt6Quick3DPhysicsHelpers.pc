@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6Quick3DPhysicsHelpers
 Description: Qt6Quick3DPhysicsHelpers module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtQuick3DPhysicsHelpers -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtQuick3DPhysicsHelpers -framework QtQml -framework QtQuick -framework QtQuick3D -framework QtQuick3DPhysics
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtQuick3DPhysicsHelpers.framework/Headers -DQT_QUICK3DPHYSICSHELPERS_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt6Qml Qt6Quick Qt6Quick3D Qt6Quick3DPhysics

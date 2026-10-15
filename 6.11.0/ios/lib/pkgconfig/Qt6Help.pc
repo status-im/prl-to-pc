@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6Help
 Description: Qt6Help module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtHelp -framework QtCore
+Libs: -F${libdir} -framework QtHelp -framework QtCore -framework QtSql -framework QtGui -framework QtWidgets
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtHelp.framework/Headers -DQT_HELP_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Sql Qt6Gui Qt6Widgets

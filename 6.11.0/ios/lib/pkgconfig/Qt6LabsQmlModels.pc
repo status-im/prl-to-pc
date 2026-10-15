@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6LabsQmlModels
 Description: Qt6LabsQmlModels module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtLabsQmlModels -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtLabsQmlModels -framework QtQmlModels -framework QtQml
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtLabsQmlModels.framework/Headers -DQT_LABSQMLMODELS_LIB
-Requires: Qt6Network Qt6Core
+Requires: Qt6QmlModels Qt6Qml

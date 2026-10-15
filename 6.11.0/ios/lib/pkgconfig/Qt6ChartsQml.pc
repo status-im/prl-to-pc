@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6ChartsQml
 Description: Qt6ChartsQml module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtChartsQml -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtChartsQml -framework QtCharts -framework QtCore -framework QtGui -framework QtQml -framework QtQuick -framework QtOpenGL
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtChartsQml.framework/Headers -DQT_CHARTSQML_LIB
-Requires: Qt6Network Qt6Core
+Requires: Qt6Charts Qt6Core Qt6Gui Qt6Qml Qt6Quick Qt6OpenGL

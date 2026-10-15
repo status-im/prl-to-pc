@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6DataVisualizationQml
 Description: Qt6DataVisualizationQml module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtDataVisualizationQml -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtDataVisualizationQml -framework QtCore -framework QtGui -framework QtOpenGL -framework QtQml -framework QtQuick -framework QtDataVisualization
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtDataVisualizationQml.framework/Headers -DQT_DATAVISUALIZATIONQML_LIB
-Requires: Qt6Network Qt6Core
+Requires: Qt6Core Qt6Gui Qt6OpenGL Qt6Qml Qt6Quick Qt6DataVisualization

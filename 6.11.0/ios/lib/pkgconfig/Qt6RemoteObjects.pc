@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6RemoteObjects
 Description: Qt6RemoteObjects module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtRemoteObjects -framework QtCore
+Libs: -F${libdir} -framework QtRemoteObjects -framework QtCore -framework QtNetwork
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtRemoteObjects.framework/Headers -DQT_REMOTEOBJECTS_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Network

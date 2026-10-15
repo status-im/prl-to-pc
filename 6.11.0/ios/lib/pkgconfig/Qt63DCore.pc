@@ -9,5 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt63DCore
 Description: Qt63DCore module
 Version: 6.11.0
-Libs: -F${libdir} -framework Qt3DCore
+Libs: -F${libdir} -framework Qt3DCore -framework QtConcurrent -framework QtCore -framework QtGui -framework QtNetwork
 Cflags: -F${libdir} -I${includedir} -I${libdir}/Qt3DCore.framework/Headers -DQT_3DCORE_LIB
+Requires: Qt6Concurrent Qt6Core Qt6Gui Qt6Network

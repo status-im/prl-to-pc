@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6Multimedia
 Description: Qt6Multimedia module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtMultimedia -framework QtCore
+Libs: -F${libdir} -framework QtMultimedia -framework QtCore -framework QtGui -framework QtConcurrent -framework QtNetwork
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtMultimedia.framework/Headers -DQT_MULTIMEDIA_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Gui Qt6Concurrent Qt6Network

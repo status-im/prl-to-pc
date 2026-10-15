@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6QmlLocalStorage
 Description: Qt6QmlLocalStorage module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtQmlLocalStorage -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtQmlLocalStorage -framework QtSql -framework QtCore -framework QtQml
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtQmlLocalStorage.framework/Headers -DQT_QMLLOCALSTORAGE_LIB
-Requires: Qt6Network Qt6Core
+Requires: Qt6Sql Qt6Core Qt6Qml

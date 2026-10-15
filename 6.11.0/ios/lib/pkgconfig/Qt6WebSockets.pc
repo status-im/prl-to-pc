@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6WebSockets
 Description: Qt6WebSockets module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtWebSockets -framework QtCore
+Libs: -F${libdir} -framework QtWebSockets -framework QtCore -framework QtNetwork
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtWebSockets.framework/Headers -DQT_WEBSOCKETS_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Network

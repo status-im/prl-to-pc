@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6WebViewQuick
 Description: Qt6WebViewQuick module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtWebViewQuick -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtWebViewQuick -framework QtQuick -framework QtQmlModels -framework QtWebView -framework QtOpenGL
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtWebViewQuick.framework/Headers -DQT_WEBVIEWQUICK_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt6Quick Qt6QmlModels Qt6WebView Qt6OpenGL

@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt63DQuickExtras
 Description: Qt63DQuickExtras module
 Version: 6.11.0
-Libs: -F${libdir} -framework Qt3DQuickExtras -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework Qt3DQuickExtras -framework Qt3DCore -framework Qt3DExtras -framework Qt3DInput -framework Qt3DLogic -framework Qt3DQuick -framework Qt3DRender -framework QtCore -framework QtGui -framework QtQml
 Cflags: -F${libdir} -I${includedir} -I${libdir}/Qt3DQuickExtras.framework/Headers -DQT_3DQUICKEXTRAS_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt63DCore Qt63DExtras Qt63DInput Qt63DLogic Qt63DQuick Qt63DRender Qt6Core Qt6Gui Qt6Qml

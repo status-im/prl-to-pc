@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6LabsWavefrontMesh
 Description: Qt6LabsWavefrontMesh module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtLabsWavefrontMesh -framework QtCore
+Libs: -F${libdir} -framework QtLabsWavefrontMesh -framework QtCore -framework QtGui -framework QtQuick
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtLabsWavefrontMesh.framework/Headers -DQT_LABSWAVEFRONTMESH_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Gui Qt6Quick

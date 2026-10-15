@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt63DInput
 Description: Qt63DInput module
 Version: 6.11.0
-Libs: -F${libdir} -framework Qt3DInput -framework QtCore
+Libs: -F${libdir} -framework Qt3DInput -framework Qt3DCore -framework QtCore -framework QtGui
 Cflags: -F${libdir} -I${includedir} -I${libdir}/Qt3DInput.framework/Headers -DQT_3DINPUT_LIB
-Requires: Qt6Core
+Requires: Qt63DCore Qt6Core Qt6Gui

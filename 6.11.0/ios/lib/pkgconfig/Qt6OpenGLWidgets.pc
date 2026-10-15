@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6OpenGLWidgets
 Description: Qt6OpenGLWidgets module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtOpenGLWidgets -framework QtGui -framework QtCore
+Libs: -F${libdir} -framework QtOpenGLWidgets -framework QtOpenGL -framework QtWidgets
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtOpenGLWidgets.framework/Headers -DQT_OPENGLWIDGETS_LIB
-Requires: Qt6Gui Qt6Core
+Requires: Qt6OpenGL Qt6Widgets

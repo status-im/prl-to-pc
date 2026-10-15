@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6LottieVectorImageHelpers
 Description: Qt6LottieVectorImageHelpers module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtLottieVectorImageHelpers -framework QtCore
+Libs: -F${libdir} -framework QtLottieVectorImageHelpers -framework QtQuick
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtLottieVectorImageHelpers.framework/Headers -DQT_LOTTIEVECTORIMAGEHELPERS_LIB
-Requires: Qt6Core
+Requires: Qt6Quick

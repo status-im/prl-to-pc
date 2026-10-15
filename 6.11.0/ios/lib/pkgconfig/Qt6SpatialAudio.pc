@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6SpatialAudio
 Description: Qt6SpatialAudio module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtSpatialAudio -framework QtCore
+Libs: -F${libdir} -framework QtSpatialAudio -framework QtMultimedia
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtSpatialAudio.framework/Headers -DQT_SPATIALAUDIO_LIB
-Requires: Qt6Core
+Requires: Qt6Multimedia

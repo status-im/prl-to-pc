@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6ProtobufQtGuiTypes
 Description: Qt6ProtobufQtGuiTypes module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtProtobufQtGuiTypes -framework QtCore
+Libs: -F${libdir} -framework QtProtobufQtGuiTypes -framework QtProtobufQtCoreTypes -framework QtCore -framework QtGui -framework QtProtobuf
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtProtobufQtGuiTypes.framework/Headers -DQT_PROTOBUFQTGUITYPES_LIB
-Requires: Qt6Core
+Requires: Qt6ProtobufQtCoreTypes Qt6Core Qt6Gui Qt6Protobuf

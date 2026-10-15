@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6QuickTest
 Description: Qt6QuickTest module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtQuickTest -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtQuickTest -framework QtCore -framework QtTest -framework QtGui -framework QtQml -framework QtQuick
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtQuickTest.framework/Headers -DQT_QUICKTEST_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt6Core Qt6Test Qt6Gui Qt6Qml Qt6Quick

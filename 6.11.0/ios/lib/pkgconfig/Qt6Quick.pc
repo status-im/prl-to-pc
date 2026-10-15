@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6Quick
 Description: Qt6Quick module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtQuick -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtQuick -framework QtCore -framework QtGui -framework QtQml -framework QtQmlModels -framework QtQmlMeta -framework QtNetwork -framework QtOpenGL
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtQuick.framework/Headers -DQT_QUICK_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt6Core Qt6Gui Qt6Qml Qt6QmlModels Qt6QmlMeta Qt6Network Qt6OpenGL

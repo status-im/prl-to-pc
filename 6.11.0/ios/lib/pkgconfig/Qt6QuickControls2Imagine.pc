@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6QuickControls2Imagine
 Description: Qt6QuickControls2Imagine module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtQuickControls2Imagine -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtQuickControls2Imagine -framework QtCore -framework QtGui -framework QtQml -framework QtQuickControls2ImagineStyleImpl -framework QtQuickControls2Impl -framework QtQuickControls2 -framework QtQuick -framework QtQuickTemplates2 -framework QtQuickControls2Basic
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtQuickControls2Imagine.framework/Headers -DQT_QUICKCONTROLS2IMAGINE_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt6Core Qt6Gui Qt6Qml Qt6QuickControls2ImagineStyleImpl Qt6QuickControls2Impl Qt6QuickControls2 Qt6Quick Qt6QuickTemplates2 Qt6QuickControls2Basic

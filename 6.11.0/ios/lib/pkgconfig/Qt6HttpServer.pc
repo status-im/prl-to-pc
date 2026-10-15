@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6HttpServer
 Description: Qt6HttpServer module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtHttpServer -framework QtCore
+Libs: -F${libdir} -framework QtHttpServer -framework QtCore -framework QtNetwork -framework QtWebSockets
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtHttpServer.framework/Headers -DQT_HTTPSERVER_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Network Qt6WebSockets

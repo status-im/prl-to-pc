@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6QmlNetwork
 Description: Qt6QmlNetwork module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtQmlNetwork -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtQmlNetwork -framework QtCore -framework QtNetwork -framework QtQml
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtQmlNetwork.framework/Headers -DQT_QMLNETWORK_LIB
-Requires: Qt6Network Qt6Core
+Requires: Qt6Core Qt6Network Qt6Qml

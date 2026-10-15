@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6Graphs
 Description: Qt6Graphs module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtGraphs -framework QtCore
+Libs: -F${libdir} -framework QtGraphs -framework QtCore -framework QtGui -framework QtQuick -framework QtQuick3D -framework QtQuickShapes -framework QtQuick3DRuntimeRender
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtGraphs.framework/Headers -DQT_GRAPHS_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Gui Qt6Quick Qt6Quick3D Qt6QuickShapes Qt6Quick3DRuntimeRender

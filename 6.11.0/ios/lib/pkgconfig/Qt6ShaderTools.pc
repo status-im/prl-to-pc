@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6ShaderTools
 Description: Qt6ShaderTools module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtShaderTools -framework QtCore
+Libs: -F${libdir} -framework QtShaderTools -framework QtCore -framework QtGui
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtShaderTools.framework/Headers -DQT_SHADERTOOLS_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Gui

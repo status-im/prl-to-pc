@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6LabsStyleKitImpl
 Description: Qt6LabsStyleKitImpl module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtLabsStyleKitImpl -framework QtCore
+Libs: -F${libdir} -framework QtLabsStyleKitImpl -framework QtGui -framework QtQuick -framework QtQuickTemplates2 -framework QtLabsStyleKit
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtLabsStyleKitImpl.framework/Headers -DQT_LABSSTYLEKITIMPL_LIB
-Requires: Qt6Core
+Requires: Qt6Gui Qt6Quick Qt6QuickTemplates2 Qt6LabsStyleKit

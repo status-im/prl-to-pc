@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6Bluetooth
 Description: Qt6Bluetooth module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtBluetooth -framework QtCore
+Libs: -F${libdir} -framework QtBluetooth -framework QtCore -framework QtNetwork
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtBluetooth.framework/Headers -DQT_BLUETOOTH_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Network

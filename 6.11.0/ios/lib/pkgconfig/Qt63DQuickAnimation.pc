@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt63DQuickAnimation
 Description: Qt63DQuickAnimation module
 Version: 6.11.0
-Libs: -F${libdir} -framework Qt3DQuickAnimation -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework Qt3DQuickAnimation -framework Qt3DAnimation -framework Qt3DCore -framework Qt3DQuick -framework Qt3DRender -framework QtCore -framework QtGui -framework QtQml
 Cflags: -F${libdir} -I${includedir} -I${libdir}/Qt3DQuickAnimation.framework/Headers -DQT_3DQUICKANIMATION_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt63DAnimation Qt63DCore Qt63DQuick Qt63DRender Qt6Core Qt6Gui Qt6Qml

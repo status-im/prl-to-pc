@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6TaskTree
 Description: Qt6TaskTree module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtTaskTree -framework QtCore
+Libs: -F${libdir} -framework QtTaskTree -framework QtCore -framework QtConcurrent -framework QtNetwork
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtTaskTree.framework/Headers -DQT_TASKTREE_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Concurrent Qt6Network

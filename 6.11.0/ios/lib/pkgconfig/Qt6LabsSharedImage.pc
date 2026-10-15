@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6LabsSharedImage
 Description: Qt6LabsSharedImage module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtLabsSharedImage -framework QtCore
+Libs: -F${libdir} -framework QtLabsSharedImage -framework QtCore -framework QtGui -framework QtQuick
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtLabsSharedImage.framework/Headers -DQT_LABSSHAREDIMAGE_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Gui Qt6Quick

@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6QuickControls2Fusion
 Description: Qt6QuickControls2Fusion module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtQuickControls2Fusion -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtQuickControls2Fusion -framework QtCore -framework QtGui -framework QtQml -framework QtQuickControls2FusionStyleImpl -framework QtQuickControls2 -framework QtQuick -framework QtQuickTemplates2 -framework QtQuickControls2Basic
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtQuickControls2Fusion.framework/Headers -DQT_QUICKCONTROLS2FUSION_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt6Core Qt6Gui Qt6Qml Qt6QuickControls2FusionStyleImpl Qt6QuickControls2 Qt6Quick Qt6QuickTemplates2 Qt6QuickControls2Basic

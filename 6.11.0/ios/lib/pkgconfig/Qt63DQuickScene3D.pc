@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt63DQuickScene3D
 Description: Qt63DQuickScene3D module
 Version: 6.11.0
-Libs: -F${libdir} -framework Qt3DQuickScene3D -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework Qt3DQuickScene3D -framework Qt3DCore -framework QtCore -framework QtQuick -framework Qt3DRender -framework QtGui -framework QtQml -framework Qt3DInput -framework Qt3DLogic -framework Qt3DAnimation
 Cflags: -F${libdir} -I${includedir} -I${libdir}/Qt3DQuickScene3D.framework/Headers -DQT_3DQUICKSCENE3D_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt63DCore Qt6Core Qt6Quick Qt63DRender Qt6Gui Qt6Qml Qt63DInput Qt63DLogic Qt63DAnimation

@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6QmlMeta
 Description: Qt6QmlMeta module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtQmlMeta -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtQmlMeta -framework QtQml -framework QtQmlModels -framework QtQmlWorkerScript
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtQmlMeta.framework/Headers -DQT_QMLMETA_LIB
-Requires: Qt6Network Qt6Core
+Requires: Qt6Qml Qt6QmlModels Qt6QmlWorkerScript

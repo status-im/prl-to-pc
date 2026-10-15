@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt63DAnimation
 Description: Qt63DAnimation module
 Version: 6.11.0
-Libs: -F${libdir} -framework Qt3DAnimation -framework QtCore
+Libs: -F${libdir} -framework Qt3DAnimation -framework Qt3DCore -framework Qt3DRender -framework QtCore -framework QtGui
 Cflags: -F${libdir} -I${includedir} -I${libdir}/Qt3DAnimation.framework/Headers -DQT_3DANIMATION_LIB
-Requires: Qt6Core
+Requires: Qt63DCore Qt63DRender Qt6Core Qt6Gui

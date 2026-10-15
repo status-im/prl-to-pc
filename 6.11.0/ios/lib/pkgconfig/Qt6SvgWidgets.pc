@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6SvgWidgets
 Description: Qt6SvgWidgets module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtSvgWidgets -framework QtGui -framework QtCore
+Libs: -F${libdir} -framework QtSvgWidgets -framework QtCore -framework QtGui -framework QtSvg -framework QtWidgets
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtSvgWidgets.framework/Headers -DQT_SVGWIDGETS_LIB
-Requires: Qt6Gui Qt6Core
+Requires: Qt6Core Qt6Gui Qt6Svg Qt6Widgets

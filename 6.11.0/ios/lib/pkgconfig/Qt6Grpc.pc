@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6Grpc
 Description: Qt6Grpc module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtGrpc -framework QtCore
+Libs: -F${libdir} -framework QtGrpc -framework QtCore -framework QtProtobuf -framework QtNetwork
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtGrpc.framework/Headers -DQT_GRPC_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Protobuf Qt6Network

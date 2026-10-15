@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6ScxmlQml
 Description: Qt6ScxmlQml module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtScxmlQml -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtScxmlQml -framework QtCore -framework QtQml -framework QtScxml
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtScxmlQml.framework/Headers -DQT_SCXMLQML_LIB
-Requires: Qt6Network Qt6Core
+Requires: Qt6Core Qt6Qml Qt6Scxml
