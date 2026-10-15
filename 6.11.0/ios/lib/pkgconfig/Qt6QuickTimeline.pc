@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6QuickTimeline
 Description: Qt6QuickTimeline module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtQuickTimeline -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtQuickTimeline -framework QtCore -framework QtQml -framework QtQuick
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtQuickTimeline.framework/Headers -DQT_QUICKTIMELINE_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt6Core Qt6Qml Qt6Quick

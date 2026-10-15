@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6WebView
 Description: Qt6WebView module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtWebView -framework QtCore -framework QtGui -framework QtQuick
+Libs: -F${libdir} -framework QtWebView -framework QtCore -framework QtGui
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtWebView.framework/Headers -DQT_WEBVIEW_LIB
-Requires: Qt6Core Qt6Gui Qt6Quick
+Requires: Qt6Core Qt6Gui

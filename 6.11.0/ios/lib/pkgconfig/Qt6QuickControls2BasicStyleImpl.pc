@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6QuickControls2BasicStyleImpl
 Description: Qt6QuickControls2BasicStyleImpl module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtQuickControls2BasicStyleImpl -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtQuickControls2BasicStyleImpl -framework QtCore -framework QtGui -framework QtQml -framework QtQuickControls2Impl -framework QtQuick -framework QtQuickTemplates2
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtQuickControls2BasicStyleImpl.framework/Headers -DQT_QUICKCONTROLS2BASICSTYLEIMPL_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt6Core Qt6Gui Qt6Qml Qt6QuickControls2Impl Qt6Quick Qt6QuickTemplates2

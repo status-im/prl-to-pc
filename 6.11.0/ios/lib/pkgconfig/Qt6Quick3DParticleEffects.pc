@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6Quick3DParticleEffects
 Description: Qt6Quick3DParticleEffects module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtQuick3DParticleEffects -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtQuick3DParticleEffects -framework QtCore -framework QtGui -framework QtQml -framework QtQuick -framework QtQuick3DRuntimeRender -framework QtQuick3DAssetImport -framework QtQuick3D -framework QtQuick3DParticles
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtQuick3DParticleEffects.framework/Headers -DQT_QUICK3DPARTICLEEFFECTS_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt6Core Qt6Gui Qt6Qml Qt6Quick Qt6Quick3DRuntimeRender Qt6Quick3DAssetImport Qt6Quick3D Qt6Quick3DParticles

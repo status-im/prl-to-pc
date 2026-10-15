@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6QuickControls2MaterialStyleImpl
 Description: Qt6QuickControls2MaterialStyleImpl module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtQuickControls2MaterialStyleImpl -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtQuickControls2MaterialStyleImpl -framework QtCore -framework QtGui -framework QtQml -framework QtQuickControls2Impl -framework QtQuick -framework QtQuickTemplates2
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtQuickControls2MaterialStyleImpl.framework/Headers -DQT_QUICKCONTROLS2MATERIALSTYLEIMPL_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt6Core Qt6Gui Qt6Qml Qt6QuickControls2Impl Qt6Quick Qt6QuickTemplates2

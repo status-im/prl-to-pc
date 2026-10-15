@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6VirtualKeyboardQml
 Description: Qt6VirtualKeyboardQml module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtVirtualKeyboardQml -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtVirtualKeyboardQml -framework QtCore -framework QtGui -framework QtQml -framework QtQuick -framework QtVirtualKeyboard
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtVirtualKeyboardQml.framework/Headers -DQT_VIRTUALKEYBOARDQML_LIB
-Requires: Qt6Network Qt6Core
+Requires: Qt6Core Qt6Gui Qt6Qml Qt6Quick Qt6VirtualKeyboard

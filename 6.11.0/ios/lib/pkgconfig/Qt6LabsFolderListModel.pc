@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6LabsFolderListModel
 Description: Qt6LabsFolderListModel module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtLabsFolderListModel -framework QtCore
+Libs: -F${libdir} -framework QtLabsFolderListModel -framework QtCore -framework QtQml -framework QtQmlModels
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtLabsFolderListModel.framework/Headers -DQT_LABSFOLDERLISTMODEL_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Qml Qt6QmlModels

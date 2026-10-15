@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6Location
 Description: Qt6Location module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtLocation -framework QtCore
+Libs: -F${libdir} -framework QtLocation -framework QtCore -framework QtPositioning -framework QtPositioningQuick -framework QtGui -framework QtQuick -framework QtQml -framework QtQuickShapes
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtLocation.framework/Headers -DQT_LOCATION_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Positioning Qt6PositioningQuick Qt6Gui Qt6Quick Qt6Qml Qt6QuickShapes

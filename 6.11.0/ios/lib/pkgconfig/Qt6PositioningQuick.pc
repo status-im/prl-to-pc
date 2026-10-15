@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6PositioningQuick
 Description: Qt6PositioningQuick module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtPositioningQuick -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtPositioningQuick -framework QtCore -framework QtPositioning -framework QtQml -framework QtQuick
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtPositioningQuick.framework/Headers -DQT_POSITIONINGQUICK_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt6Core Qt6Positioning Qt6Qml Qt6Quick

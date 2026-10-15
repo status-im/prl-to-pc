@@ -138,3 +138,13 @@ suite "committed .pc compile":
       let sysroot = ndk / "toolchains" / "llvm" / "prebuilt" / hostTag / "sysroot"
       let extra = "--target=aarch64-linux-android28 --sysroot=" & quoteShell(sysroot)
       runCompileCheck(VERSION, "android_arm64_v8a", prefix, "arm64-v8a", quoteShell(clang), extra)
+
+suite "committed iOS .pc trees":
+  test "Qt6Multimedia requires the modules its headers include":
+    let pc = readFile(repo / "6.11.0" / "ios" / "lib" / "pkgconfig" / "Qt6Multimedia.pc")
+    var requires = ""
+    for line in pc.splitLines:
+      if line.startsWith("Requires:"):
+        requires = line
+    for dep in ["Qt6Core", "Qt6Gui", "Qt6Network"]:
+      check dep in requires.splitWhitespace

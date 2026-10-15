@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt63DExtras
 Description: Qt63DExtras module
 Version: 6.11.0
-Libs: -F${libdir} -framework Qt3DExtras -framework QtCore
+Libs: -F${libdir} -framework Qt3DExtras -framework QtCore -framework QtGui -framework Qt3DCore -framework Qt3DInput -framework Qt3DLogic -framework Qt3DRender
 Cflags: -F${libdir} -I${includedir} -I${libdir}/Qt3DExtras.framework/Headers -DQT_3DEXTRAS_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Gui Qt63DCore Qt63DInput Qt63DLogic Qt63DRender

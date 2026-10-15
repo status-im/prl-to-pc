@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt63DLogic
 Description: Qt63DLogic module
 Version: 6.11.0
-Libs: -F${libdir} -framework Qt3DLogic -framework QtCore
+Libs: -F${libdir} -framework Qt3DLogic -framework Qt3DCore -framework QtCore -framework QtGui
 Cflags: -F${libdir} -I${includedir} -I${libdir}/Qt3DLogic.framework/Headers -DQT_3DLOGIC_LIB
-Requires: Qt6Core
+Requires: Qt63DCore Qt6Core Qt6Gui

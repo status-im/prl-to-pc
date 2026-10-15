@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6NetworkAuth
 Description: Qt6NetworkAuth module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtNetworkAuth -framework QtCore
+Libs: -F${libdir} -framework QtNetworkAuth -framework QtCore -framework QtNetwork -framework QtGui
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtNetworkAuth.framework/Headers -DQT_NETWORKAUTH_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Network Qt6Gui

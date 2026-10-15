@@ -1,4 +1,4 @@
-import os, strutils, regex, strformat
+import std/options, os, strutils, regex, strformat
 
 proc findAllStr(s: string, pattern: Regex2): seq[string] =
   for m in findAll(s, pattern):
@@ -169,47 +169,26 @@ proc cleanLibraryName(name: string): string =
             .replace("_debug", "")
             .replace(".framework", "")
 
-proc getDependenciesFromCMake(cmakePath: string): seq[string] =
-  ## Extract dependencies from CMake files
-  result = @[]
-  
-  # Get the base module name from the path
-  let fileName = cmakePath.splitPath().tail
-  let moduleNameParts = fileName.split("Dependencies.cmake")
-  if moduleNameParts.len < 1:
-    return result
-    
-  let moduleNameWithQt6 = moduleNameParts[0]
-  
-  # Default dependencies based on module type
-  if moduleNameWithQt6.contains("Quick"):
-    result.add("Qt6Qml")
-    result.add("Qt6OpenGL")
-    result.add("Qt6Gui")
-    result.add("Qt6Network")
-    result.add("Qt6Core")
-  elif moduleNameWithQt6.contains("Qml"):
-    result.add("Qt6Network")
-    result.add("Qt6Core")
-  elif moduleNameWithQt6.contains("Gui"):
-    result.add("Qt6Core")
-  elif moduleNameWithQt6.contains("Widgets"):
-    result.add("Qt6Gui")
-    result.add("Qt6Core")
-  elif moduleNameWithQt6.contains("Network"):
-    result.add("Qt6Core")
-  elif moduleNameWithQt6.contains("WebView"):
-    result.add("Qt6Core")
-    result.add("Qt6Gui")
-    result.add("Qt6Quick")
-  elif moduleNameWithQt6.contains("Core"):
-    # No dependencies for Core
-    discard
-  else:
-    # Add at least Core for any other module
-    result.add("Qt6Core")
-  
-  return result
+proc parseTargetDeps(cmakePath, moduleName: string): seq[string] =
+  ## The required Qt dependencies declared in a <name>Dependencies.cmake.
+  ## Parse ONLY the required-dependency declaration:
+  ##   set(__qt_<Module>_target_deps "Qt6Core\;6.11.0;Qt6Network\;6.11.0")
+  ## NOT the whole file (which contains example deps in comments — that produced a
+  ## bogus Qt6Core->Qt6Gui edge and a Core<->Gui cycle that pkg-config-lite chokes
+  ## on) and NOT the *optional*_target_deps line (optional deps can form cycles;
+  ## the required graph is a DAG).
+  if not fileExists(cmakePath):
+    return @[]
+  for line in readFile(cmakePath).splitLines():
+    if "_target_deps \"" notin line or "optional" in line:
+      continue
+    let q1 = line.find('"')
+    let q2 = line.rfind('"')
+    if q1 < 0 or q2 <= q1:
+      continue
+    for dep in findAllStr(line[q1 + 1 ..< q2], re2"Qt6[A-Za-z0-9]+"):
+      if dep != moduleName and dep notin result:
+        result.add dep
 
 proc getCMakeDeps(prlPath, moduleName: string): seq[string] =
   ## Read a Qt module's real dependencies from its <name>Dependencies.cmake (Qt
@@ -222,26 +201,24 @@ proc getCMakeDeps(prlPath, moduleName: string): seq[string] =
   ## otherwise a `Requires:` entry would reference a package pkg-config can't find.
   let libDir = prlPath.splitPath().head
   let cmakePath = libDir / "cmake" / moduleName / (moduleName & "Dependencies.cmake")
+  for dep in parseTargetDeps(cmakePath, moduleName):
+    if fileExists(libDir / (dep & ".prl")):
+      result.add dep
+
+proc getIOSCMakeDeps(frameworkPath, moduleName: string): Option[seq[string]] =
+  ## iOS variant of getCMakeDeps: modules are frameworks (lib/QtGui.framework)
+  ## or static libs (lib/libQt6Foo.prl), so a dep gets a .pc when either exists.
+  ## None when the module has no Dependencies.cmake.
+  let libDir = frameworkPath.splitPath().head
+  let cmakePath = libDir / "cmake" / moduleName / (moduleName & "Dependencies.cmake")
   if not fileExists(cmakePath):
-    return @[]
-  # Parse ONLY the required-dependency declaration:
-  #   set(__qt_<Module>_target_deps "Qt6Core\;6.11.0;Qt6Network\;6.11.0")
-  # NOT the whole file (which contains example deps in comments — that produced a
-  # bogus Qt6Core->Qt6Gui edge and a Core<->Gui cycle that pkg-config-lite chokes
-  # on) and NOT the *optional*_target_deps line (optional deps can form cycles;
-  # the required graph is a DAG). Only keep deps that have a sibling .prl.
-  for line in readFile(cmakePath).splitLines():
-    if "_target_deps \"" notin line or "optional" in line:
-      continue
-    let q1 = line.find('"')
-    let q2 = line.rfind('"')
-    if q1 < 0 or q2 <= q1:
-      continue
-    for dep in findAllStr(line[q1 + 1 ..< q2], re2"Qt6[A-Za-z0-9]+"):
-      if dep == moduleName: continue
-      if dep in result: continue
-      if fileExists(libDir / (dep & ".prl")):
-        result.add dep
+    return none(seq[string])
+  var deps: seq[string]
+  for dep in parseTargetDeps(cmakePath, moduleName):
+    if dirExists(libDir / ("Qt" & dep.substr(3) & ".framework")) or
+       fileExists(libDir / ("lib" & dep & ".prl")):
+      deps.add dep
+  some(deps)
 
 proc getFrameworkLibsString(module: QtModule): string =
   ## Generate framework Libs string including all dependencies
@@ -297,16 +274,10 @@ proc parseFramework*(frameworkPath: string): QtModule =
   else:
     baseName = moduleInfo.name
   
-  # Try various possible CMake dependency file locations
-  let cmakePaths = @[
-    frameworkPath.splitPath().head / "cmake" / moduleInfo.name / moduleInfo.name & "Dependencies.cmake",
-    frameworkPath.splitPath().head / "cmake" / "Qt6" & baseName / "Qt6" & baseName & "Dependencies.cmake"
-  ]
-  
-  for cmakePath in cmakePaths:
-    if fileExists(cmakePath):
-      moduleInfo.requires = getDependenciesFromCMake(cmakePath)
-      break
+  # Requires: from the module's Dependencies.cmake, as Qt's own .pc lists them
+  # (e.g. Multimedia -> Core Gui Concurrent Network). Frameworks Qt ships no
+  # such file for (FFmpeg's) get none.
+  moduleInfo.requires = getIOSCMakeDeps(frameworkPath, moduleInfo.name).get(@[])
   
   # Set up libs flags for linking - framework needs to be specified with all dependencies
   moduleInfo.libs = getFrameworkLibsString(moduleInfo)

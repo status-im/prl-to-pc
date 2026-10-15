@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6QmlXmlListModel
 Description: Qt6QmlXmlListModel module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtQmlXmlListModel -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtQmlXmlListModel -framework QtCore -framework QtQml -framework QtQmlModels
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtQmlXmlListModel.framework/Headers -DQT_QMLXMLLISTMODEL_LIB
-Requires: Qt6Network Qt6Core
+Requires: Qt6Core Qt6Qml Qt6QmlModels

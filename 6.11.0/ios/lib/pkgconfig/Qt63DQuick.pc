@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt63DQuick
 Description: Qt63DQuick module
 Version: 6.11.0
-Libs: -F${libdir} -framework Qt3DQuick -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework Qt3DQuick -framework Qt3DCore -framework QtCore -framework QtGui -framework QtQml -framework QtQuick
 Cflags: -F${libdir} -I${includedir} -I${libdir}/Qt3DQuick.framework/Headers -DQT_3DQUICK_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt63DCore Qt6Core Qt6Gui Qt6Qml Qt6Quick

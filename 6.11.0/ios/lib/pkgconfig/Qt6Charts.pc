@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6Charts
 Description: Qt6Charts module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtCharts -framework QtCore
+Libs: -F${libdir} -framework QtCharts -framework QtCore -framework QtGui -framework QtWidgets -framework QtOpenGL -framework QtOpenGLWidgets
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtCharts.framework/Headers -DQT_CHARTS_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Gui Qt6Widgets Qt6OpenGL Qt6OpenGLWidgets

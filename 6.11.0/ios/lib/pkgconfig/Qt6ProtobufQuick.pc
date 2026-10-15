@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6ProtobufQuick
 Description: Qt6ProtobufQuick module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtProtobufQuick -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtProtobufQuick -framework QtQuick -framework QtCore -framework QtProtobuf -framework QtQml
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtProtobufQuick.framework/Headers -DQT_PROTOBUFQUICK_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt6Quick Qt6Core Qt6Protobuf Qt6Qml

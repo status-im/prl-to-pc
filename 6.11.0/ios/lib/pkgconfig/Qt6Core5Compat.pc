@@ -9,5 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6Core5Compat
 Description: Qt6Core5Compat module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtCore5Compat
+Libs: -F${libdir} -framework QtCore5Compat -framework QtCore
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtCore5Compat.framework/Headers -DQT_CORE5COMPAT_LIB
+Requires: Qt6Core

@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt63DQuickInput
 Description: Qt63DQuickInput module
 Version: 6.11.0
-Libs: -F${libdir} -framework Qt3DQuickInput -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework Qt3DQuickInput -framework Qt3DCore -framework Qt3DInput -framework Qt3DQuick -framework QtCore -framework QtGui -framework QtQml
 Cflags: -F${libdir} -I${includedir} -I${libdir}/Qt3DQuickInput.framework/Headers -DQT_3DQUICKINPUT_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt63DCore Qt63DInput Qt63DQuick Qt6Core Qt6Gui Qt6Qml

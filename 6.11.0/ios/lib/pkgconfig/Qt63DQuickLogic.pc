@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt63DQuickLogic
 Description: Qt63DQuickLogic module
 Version: 6.11.0
-Libs: -F${libdir} -framework Qt3DQuickLogic -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework Qt3DQuickLogic -framework Qt3DCore -framework Qt3DLogic -framework QtCore -framework QtGui -framework QtQml
 Cflags: -F${libdir} -I${includedir} -I${libdir}/Qt3DQuickLogic.framework/Headers -DQT_3DQUICKLOGIC_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt63DCore Qt63DLogic Qt6Core Qt6Gui Qt6Qml

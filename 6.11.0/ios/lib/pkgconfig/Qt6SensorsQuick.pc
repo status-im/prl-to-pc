@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6SensorsQuick
 Description: Qt6SensorsQuick module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtSensorsQuick -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtSensorsQuick -framework QtCore -framework QtQml -framework QtSensors
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtSensorsQuick.framework/Headers -DQT_SENSORSQUICK_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt6Core Qt6Qml Qt6Sensors

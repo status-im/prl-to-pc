@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt63DRender
 Description: Qt63DRender module
 Version: 6.11.0
-Libs: -F${libdir} -framework Qt3DRender -framework QtCore
+Libs: -F${libdir} -framework Qt3DRender -framework Qt3DCore -framework QtCore -framework QtOpenGL -framework QtConcurrent
 Cflags: -F${libdir} -I${includedir} -I${libdir}/Qt3DRender.framework/Headers -DQT_3DRENDER_LIB
-Requires: Qt6Core
+Requires: Qt63DCore Qt6Core Qt6OpenGL Qt6Concurrent

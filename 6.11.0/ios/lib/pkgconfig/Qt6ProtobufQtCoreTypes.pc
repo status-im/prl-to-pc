@@ -9,5 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6ProtobufQtCoreTypes
 Description: Qt6ProtobufQtCoreTypes module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtProtobufQtCoreTypes
+Libs: -F${libdir} -framework QtProtobufQtCoreTypes -framework QtCore -framework QtProtobuf
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtProtobufQtCoreTypes.framework/Headers -DQT_PROTOBUFQTCORETYPES_LIB
+Requires: Qt6Core Qt6Protobuf

@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6StateMachine
 Description: Qt6StateMachine module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtStateMachine -framework QtCore
+Libs: -F${libdir} -framework QtStateMachine -framework QtCore -framework QtGui
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtStateMachine.framework/Headers -DQT_STATEMACHINE_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Gui

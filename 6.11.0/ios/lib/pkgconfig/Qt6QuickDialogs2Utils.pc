@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6QuickDialogs2Utils
 Description: Qt6QuickDialogs2Utils module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtQuickDialogs2Utils -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtQuickDialogs2Utils -framework QtCore -framework QtGui
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtQuickDialogs2Utils.framework/Headers -DQT_QUICKDIALOGS2UTILS_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt6Core Qt6Gui

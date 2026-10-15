@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6TextToSpeech
 Description: Qt6TextToSpeech module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtTextToSpeech -framework QtCore
+Libs: -F${libdir} -framework QtTextToSpeech -framework QtCore -framework QtMultimedia
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtTextToSpeech.framework/Headers -DQT_TEXTTOSPEECH_LIB
-Requires: Qt6Core
+Requires: Qt6Core Qt6Multimedia

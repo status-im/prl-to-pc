@@ -9,6 +9,6 @@ host_bins=${prefix}/bin
 Name: Qt6QuickLayouts
 Description: Qt6QuickLayouts module
 Version: 6.11.0
-Libs: -F${libdir} -framework QtQuickLayouts -framework QtQml -framework QtOpenGL -framework QtGui -framework QtNetwork -framework QtCore
+Libs: -F${libdir} -framework QtQuickLayouts -framework QtCore -framework QtQml -framework QtGui -framework QtQuick
 Cflags: -F${libdir} -I${includedir} -I${libdir}/QtQuickLayouts.framework/Headers -DQT_QUICKLAYOUTS_LIB
-Requires: Qt6Qml Qt6OpenGL Qt6Gui Qt6Network Qt6Core
+Requires: Qt6Core Qt6Qml Qt6Gui Qt6Quick
